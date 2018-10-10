@@ -16,16 +16,16 @@ set(config_module_list
 	drivers/barometer/ms5611
 	#drivers/blinkm
 	#drivers/bst
-	drivers/camera_trigger
+#	drivers/camera_trigger
 	#drivers/differential_pressure/ets
-	drivers/differential_pressure/ms4525
-	drivers/differential_pressure/ms5525
-	drivers/differential_pressure/sdp3x
-	drivers/distance_sensor/ll40ls
+#	drivers/differential_pressure/ms4525
+#	drivers/differential_pressure/ms5525
+#	drivers/differential_pressure/sdp3x
+#	drivers/distance_sensor/ll40ls
 	#drivers/distance_sensor/mb12xx
-	drivers/distance_sensor/sf0x
-	drivers/distance_sensor/sf1xx
-	drivers/distance_sensor/srf02
+#	drivers/distance_sensor/sf0x
+#	drivers/distance_sensor/sf1xx
+#	drivers/distance_sensor/srf02
 	#drivers/distance_sensor/teraranger
 	#drivers/distance_sensor/tfmini
 	#drivers/distance_sensor/ulanding
@@ -59,10 +59,15 @@ set(config_module_list
 	drivers/vmount
 	modules/sensors
 
+	#rain 2018-9-13
+	modules/sever_nozzle_driver
+	modules/sever_nozzle_control
+
+
 	#
 	# System commands
 	#
-	#systemcmds/bl_update
+	#systemcmds/bl_updateS
 	#systemcmds/config
 	#systemcmds/dumpfile
 	#systemcmds/esc_calib

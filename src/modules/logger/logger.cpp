@@ -52,6 +52,14 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_command_ack.h>
 
+
+//rain 2018-9-25
+//add sever_nozzle_topic_ulog
+#include <uORB/topics/sever_nozzle_rx.h>
+#include <uORB/topics/sever_nozzle_rx2.h>
+#include <uORB/topics/sever_nozzle_tx.h>
+
+
 #include <drivers/drv_hrt.h>
 #include <px4_includes.h>
 #include <px4_getopt.h>
@@ -609,21 +617,21 @@ void Logger::add_default_topics()
 	add_topic("airspeed", 200);
 	add_topic("att_pos_mocap", 50);
 	add_topic("battery_status", 500);
-	add_topic("camera_capture");
-	add_topic("camera_trigger");
+//	add_topic("camera_capture");
+//	add_topic("camera_trigger");
 	add_topic("cpuload");
-	add_topic("distance_sensor", 100);
+//	add_topic("distance_sensor", 100);
 	add_topic("ekf2_innovations", 200);
 	add_topic("ekf_gps_drift");
 	add_topic("esc_status", 250);
 	add_topic("estimator_status", 200);
-	add_topic("home_position");
+//	add_topic("home_position");
 	add_topic("input_rc", 200);
-	add_topic("landing_target_pose");
+//	add_topic("landing_target_pose");
 	add_topic("manual_control_setpoint", 200);
-	add_topic("mission");
-	add_topic("mission_result");
-	add_topic("optical_flow", 50);
+//	add_topic("mission");
+//	add_topic("mission_result");
+//	add_topic("optical_flow", 50);
 	add_topic("position_setpoint_triplet", 200);
 	add_topic("radio_status");
 	add_topic("rate_ctrl_status", 30);
@@ -648,7 +656,15 @@ void Logger::add_default_topics()
 	add_topic("vehicle_vision_attitude");
 	add_topic("vehicle_vision_position");
 	add_topic("vtol_vehicle_status", 200);
-	add_topic("wind_estimate", 200);
+//	add_topic("wind_estimate", 200);
+
+	//rain 2018-9-25
+	//add sever_nozzle_topic_log
+	add_topic("sever_nozzle_rx");
+	add_topic("sever_nozzle_rx2");
+	add_topic("sever_nozzle_tx");
+
+
 
 #ifdef CONFIG_ARCH_BOARD_SITL
 	add_topic("actuator_armed");

@@ -493,6 +493,13 @@ else
 	#
 	navigator start
 
+	#rain 2018-9-20 
+	#add sever_nozzle app && driver
+	#
+	pi_uart start
+	sever_nozzle_control start
+
+
 	#
 	# Start the standalone wind estimator.
 	#
