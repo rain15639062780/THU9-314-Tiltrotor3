@@ -1006,8 +1006,12 @@ HMC5883::collect()
 			orb_publish(ORB_ID(sensor_mag), _mag_topic, &new_report);
 
 		} else {
-			_mag_topic = orb_advertise_multi(ORB_ID(sensor_mag), &new_report,
-							 &_orb_class_instance, (sensor_is_onboard) ? ORB_PRIO_HIGH : ORB_PRIO_MAX);
+		//	_mag_topic = orb_advertise_multi(ORB_ID(sensor_mag), &new_report,
+		//					 &_orb_class_instance, (sensor_is_onboard) ? ORB_PRIO_HIGH : ORB_PRIO_MAX);
+
+		//rain 2018-10-22 make adis16488-mag prio up to 255(max),so reduce hmc5883 mag prio from 255 to 125
+			 _mag_topic = orb_advertise_multi(ORB_ID(sensor_mag), &new_report,
+							  &_orb_class_instance, (sensor_is_onboard) ? ORB_PRIO_HIGH : ORB_PRIO_VERY_HIGH);
 
 			if (_mag_topic == nullptr) {
 				DEVICE_DEBUG("ADVERT FAIL");

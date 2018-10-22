@@ -81,6 +81,17 @@
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/conversion/rotation.h>
 
+//rain 2018-9-11 08:56:42
+//add user topics header
+#include <uORB/topics/sensor_gyro_adis16488.h>
+#include <uORB/topics/sensor_accel_adis16488.h>
+#include <uORB/topics/sensor_mag_adis16488.h>
+
+//rain 2018-9-11 08:55:25
+//user topic log enable switch
+//1：enable,0:disable
+#define USER_TOPIC_LOG_ENABLE	0
+
 #define DIR_READ				0x00
 #define DIR_WRITE				0x80
 
@@ -97,23 +108,6 @@
 #define ADIS16488_PAGE2  	0x02  /* ADIS16488 PAGE ID */
 #define ADIS16488_PAGE3  	0x03  /* ADIS16488 PAGE ID */
 #define ADIS16488_PAGE4  	0x04  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGE5  	0x05  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGE6  	0x06  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGE7  	0x07  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGE8  	0x08  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGE9  	0x09  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGEA  	0x0A  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGEB  	0x0B  /* ADIS16488 PAGE ID */
-#define ADIS16488_PAGEC  	0x0C  /* ADIS16488 PAGE ID */
-
-
-
-
-
-
-
-
-
 
 
 //rain 2018-8-29 17:01:58
@@ -142,19 +136,6 @@
 #define ADIS16488_FNCTIO_CTRL   0x06  /* Control, I/O pins, functional definitions */
 #define ADIS16488_GPIO_CTRL 	0x08  /* Auxiliary digital input/output control */
 #define ADIS16488_DEC_RATE      0X0C  /* output sample rate decimation */
-#define ADIS16488_FILTER_BNK_0  0x16   
-#define ADIS16488_FILTER_BNK_1  0x18 
-
-#define ADIS16488_FILTER_A 0x4924
-#define ADIS16488_FILTER_B 0x5B6D
-#define ADIS16488_FILTER_C 0x6DB6
-#define ADIS16488_FILTER_D 0x7FFF
-
-#define ADIS16488_FILTER_EN_A 0x04
-#define ADIS16488_FILTER_EN_B 0x05
-#define ADIS16488_FILTER_EN_C 0x06
-#define ADIS16488_FILTER_EN_D 0x07
-
 
 //rain 2018-8-29 17:01:58
 //  ADIS16488  page4 registers
@@ -348,6 +329,8 @@ private:
 
 
 	orb_advert_t		_accel_topic;
+	orb_advert_t        _accel_topic_adis16488;
+
 	int					_accel_orb_class_instance;
 	int					_accel_class_instance;
 
@@ -584,6 +567,8 @@ protected:
 private:
 	ADIS16488			*_parent;
 	orb_advert_t		_gyro_topic;
+	orb_advert_t       _gyro_topic_adis16488;
+
 	int					_gyro_orb_class_instance;
 	int					_gyro_class_instance;
 
@@ -616,6 +601,8 @@ protected:
 private:
 	ADIS16488			*_parent;
 	orb_advert_t		_mag_topic;
+	orb_advert_t		_mag_topic_adis16488;
+
 	int					_mag_orb_class_instance;
 	int					_mag_class_instance;
 
@@ -657,6 +644,7 @@ ADIS16488::ADIS16488(int bus, const char *path_accel, const char *path_gyro, con
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),	
 	_accel_topic(nullptr),
+	_accel_topic_adis16488(nullptr),
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 
@@ -920,6 +908,28 @@ ADIS16488::init()
 		warnx("ADVERT FAIL");
 	}
 
+//add user topic advertise
+
+	if(1 == USER_TOPIC_LOG_ENABLE){
+		_gyro->_gyro_topic_adis16488 = orb_advertise(ORB_ID(sensor_gyro_adis16488), &grp);
+
+		if (_gyro->_gyro_topic_adis16488 == nullptr) {
+			warnx("_gyro_topicadis16488 ADVERT FAIL");
+		}	
+		_accel_topic_adis16488 = orb_advertise(ORB_ID(sensor_accel_adis16488), &arp);
+
+		if (_accel_topic_adis16488 == nullptr) {
+			warnx("_accel_topicadis16488 ADVERT FAIL");
+		}	
+		_mag->_mag_topic_adis16488 = orb_advertise(ORB_ID(sensor_mag_adis16488), &mrp);
+
+		if (_mag->_mag_topic_adis16488 == nullptr) {
+			warnx("_mag_topicadis16488 ADVERT FAIL");
+		}	
+
+	}
+
+
 /**/
 
   warnx("rain: ADIS16488::init exit");
@@ -932,6 +942,7 @@ int ADIS16488::reset()
 {
 
 	//rain 2018-8-30 10:53:49
+
 
 	//1- Set IMU sample rate 
 	//_set_sample_rate(_sample_rate);
@@ -957,44 +968,6 @@ int ADIS16488::reset()
 
 	//3- Set digital FIR filter tap 
 	//_accel_gyro_set_dlpf_filter(BITS_FIR_16_TAP_CFG);
-
-	//rain 2018-10-17
-	//add adis16488 (自带)滤波器库使能
-/*	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
-	write_reg16(ADIS16488_FILTER_BNK_0, ADIS16488_FILTER_A);
-	write_reg16(ADIS16488_FILTER_BNK_1, ADIS16488_FILTER_A);
-	*/
-
-  
-	
-	uint filer_data = 0x00;
-	//            GYRO-X | GYRO-Y  | GYRO-Z  | ACC-X   | ACC-Y    | NONE
-	//--------------------------------------------------------------------
-	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X04<<12 | 0<<15;
-	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-		    | ADIS16488_FILTER_EN_B << 12 | 0X00 << 15;
-
-
-				
-	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
-	write_reg16(ADIS16488_FILTER_BNK_0, filer_data);
-
-	//            ACC-Z  | MAG-X   | MAG-Y   | MAG-Z   | NONE
-	//-------------------------------------------------------------
-	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X00<<12 ;
-	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-		    | 0X00 << 12;
-
-	
-	write_reg16(ADIS16488_FILTER_BNK_1, filer_data);
-	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
-
-	
-	
-
-	
 
 	/* settling time */
 	up_udelay(50000);
@@ -1416,10 +1389,8 @@ ADIS16488::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case ACCELIOCGRANGE:
 		return (unsigned long)((_accel_range_m_s2) / CONSTANTS_ONE_G + 0.5f);
 
-	//rain 2018-10-21
-	//firmware 1.8.0 already delete xxxSELFTEST
-	//case ACCELIOCSELFTEST:
-	//	return accel_self_test();
+	case ACCELIOCSELFTEST:
+		return accel_self_test();
 
 	case ACCELIOCTYPE:
 		return (ADIS16488_Product);
@@ -1544,10 +1515,8 @@ ADIS16488::gyro_ioctl(struct file *filp, int cmd, unsigned long arg)
 	case GYROIOCGRANGE:
 		return (unsigned long)(_gyro_range_rad_s * 180.0f / M_PI_F + 0.5f);
 
-	//rain 2018-10-21
-	//firmware 1.8.0 already delete xxxSELFTEST
-	//case GYROIOCSELFTEST:
-	//	return gyro_self_test();
+	case GYROIOCSELFTEST:
+		return gyro_self_test();
 
 	case GYROIOCTYPE:
 		return (ADIS16488_Product);
@@ -1672,10 +1641,8 @@ ADIS16488::mag_ioctl(struct file *filp, int cmd, unsigned long arg)
 	case MAGIOCGRANGE:
 		return (unsigned long)(_mag_range_mgauss);
 
-	//rain 2018-10-21
-	//firmware 1.8.0 already delete xxxSELFTEST
-	//case MAGIOCSELFTEST:
-	//	return OK;
+	case MAGIOCSELFTEST:
+		return OK;
 
 	case MAGIOCTYPE:
 		return (ADIS16488_Product);
@@ -1962,8 +1929,7 @@ ADIS16488::measure()
 	  large value. We want to detect this and mark the sensor as
 	  being faulty
 	 */
-	//rain 2018-10-22  delete this code, it does not work
-/*	if (fabsf(_last_accel[0] - x_in_new) < 0.001f &&
+	if (fabsf(_last_accel[0] - x_in_new) < 0.001f &&
 	    fabsf(_last_accel[1] - y_in_new) < 0.001f &&
 	    fabsf(_last_accel[2] - z_in_new) < 0.001f &&
 	    fabsf(x_in_new) > 18.0f &&
@@ -1985,7 +1951,7 @@ ADIS16488::measure()
 		perf_count(_accel_bad_transfers);
 		_constant_accel_count = 0;
 	}
-*/
+
 	_last_accel[0] = x_in_new;
 	_last_accel[1] = y_in_new;
 	_last_accel[2] = z_in_new;
@@ -2002,14 +1968,12 @@ ADIS16488::measure()
 	}
 
 	arb.scaling = _accel_range_scale;
-	//rain 2018-10-22 v1.8.0 delete .range_m_s2 variable
-	//arb.range_m_s2 = _accel_range_m_s2;
+	arb.range_m_s2 = _accel_range_m_s2;
 
 
 	// * Temperature report: * /
 
-	//rain 2018-10-22 v1.8.0 delete arb.temperature_raw
-	//arb.temperature_raw = _last_temperature_raw;
+	arb.temperature_raw = _last_temperature_raw;
 	arb.temperature 	= _last_temperature;
 
 	matrix::Vector3f aval(x_in_new, y_in_new, z_in_new);
@@ -2039,7 +2003,7 @@ ADIS16488::measure()
 		poll_notify(POLLIN);
 	}
 */
-	if (accel_notify && !(_pub_blocked)) {
+/*	if (accel_notify && !(_pub_blocked)) {
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
 
@@ -2047,6 +2011,17 @@ ADIS16488::measure()
 		//perf_count(_accel_reads);
 	}
 
+*/
+
+	if (accel_notify && !(_pub_blocked)) {
+		// * publish it * /
+		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
+
+		if(1==USER_TOPIC_LOG_ENABLE){
+		orb_publish(ORB_ID(sensor_accel_adis16488), _accel_topic_adis16488, &arb);
+
+		}
+	}
 
 	//rain2018-9-4 09:43:05
 	//读取计数
@@ -2170,13 +2145,12 @@ ADIS16488::gyro_measure()
 	  large value. We want to detect this and mark the sensor as
 	  being faulty
 	 */
-	//rain 2018-10-22  delete this code, it does not work
-/*	if (fabsf(_last_gyro[0] - x_gyro_in_new) < 0.03f &&
-	    fabsf(_last_gyro[1] - y_gyro_in_new) < 0.03f &&
-	    fabsf(_last_gyro[2] - z_gyro_in_new) < 0.03f &&
-	    fabsf(x_gyro_in_new) > 450.0f &&
-	    fabsf(y_gyro_in_new) > 450.0f &&
-	    fabsf(z_gyro_in_new) > 450.0f) {
+	if (fabsf(_last_gyro[0] - x_gyro_in_new) < 0.001f &&
+	    fabsf(_last_gyro[1] - y_gyro_in_new) < 0.001f &&
+	    fabsf(_last_gyro[2] - z_gyro_in_new) < 0.001f &&
+	    fabsf(x_gyro_in_new) > 7.85f &&
+	    fabsf(y_gyro_in_new) > 7.85f &&
+	    fabsf(z_gyro_in_new) > 7.85f) {
 		_constant_gyro_count += 1;
 
 	} else {
@@ -2193,7 +2167,7 @@ ADIS16488::gyro_measure()
 		perf_count(_gyro_bad_transfers);
 		_constant_accel_count = 0;
 	}
-*/
+
 	_last_gyro[0] = x_gyro_in_new;
 	_last_gyro[1] = y_gyro_in_new;
 	_last_gyro[2] = z_gyro_in_new;
@@ -2211,14 +2185,11 @@ ADIS16488::gyro_measure()
 	}
 
 	grb.scaling = _gyro_range_scale ;
-	
-	//rain 2018-10-22 v1.8.0 delete grb.range_rad_s variable
-	//grb.range_rad_s = _gyro_range_rad_s;
+	grb.range_rad_s = _gyro_range_rad_s;
 	
 
 	// * Temperature report: * /
-	//rain 2018-10-22 v1.8.0 delete grb.range_rad_s variable
-	//grb.temperature_raw = _last_temperature_raw;
+	grb.temperature_raw = _last_temperature_raw;
 	grb.temperature 	= _last_temperature;
 
 
@@ -2245,10 +2216,22 @@ ADIS16488::gyro_measure()
 		_gyro->parent_poll_notify();
 	}
 
+/*
+	if (gyro_notify && !(_pub_blocked)) {
+		// * publish it * /
+		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
+	}
+*/
 
 	if (gyro_notify && !(_pub_blocked)) {
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
+
+		if(1==USER_TOPIC_LOG_ENABLE){
+			orb_publish(ORB_ID(sensor_gyro_adis16488), _gyro->_gyro_topic_adis16488, &grb);
+
+		}
+
 	}
 
 
@@ -2372,8 +2355,7 @@ ADIS16488::mag_measure()
 	mrb.z = ((zraw_f * _mag_range_scale) - _mag_scale.z_offset) * _mag_scale.z_scale;
 
 	mrb.scaling  = _mag_range_scale;
-	//rain 2018-10-22 v1.8.0 delete mrb.range_mgauss variable
-	//mrb.range_ga = _mag_range_mgauss;
+	mrb.range_ga = _mag_range_mgauss;
 	//rain2018-9-8 15:15:47
 	_last_temperature_raw = report.temp;
 	_last_temperature = _last_temperature_raw * TEMPERATUREINITIALSENSITIVITY + 25;
@@ -2392,12 +2374,21 @@ ADIS16488::mag_measure()
 
 	//rain 2018-9-6
 	//modify mag topic publish 
-
+/*
 	if (!(_pub_blocked)) {			// * Mag data validity bit (bit 8 DIAG_STAT) * /
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_mag), _mag->_mag_topic, &mrb);
 	}
+*/
+	if (!(_pub_blocked)) {			// * Mag data validity bit (bit 8 DIAG_STAT) * /
+		// * publish it * /
+		orb_publish(ORB_ID(sensor_mag), _mag->_mag_topic, &mrb);
 
+		if(1==USER_TOPIC_LOG_ENABLE){
+			orb_publish(ORB_ID(sensor_mag_adis16488), _mag->_mag_topic_adis16488, &mrb);
+
+		}
+	}
 
 	//rain2018-9-4 09:43:05
 	//读取计数
@@ -2464,42 +2455,13 @@ ADIS16488::print_info()
 
 	printf("DEVICE ID:\nACCEL:\t%d\nGYRO:\t%d\nMAG:\t%d\n", _device_id.devid, _gyro->_device_id.devid,
 	       _mag->_device_id.devid);
-
-	//rain 2018-10-19
-   //读取filer_bank_register data,验证是否写入数据
-   uint16_t i = 0, j = 0;
-   
-   uint16_t bank_a[120];
-   memset(& bank_a, 0, sizeof(bank_a));
-   
-   write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE5);
-   for(i=0; i<60; i++)
-   {
-	   bank_a[i] = read_reg16(i*2 + 0x08);
-	   printf("bank_a[%d] = %d \t", i, bank_a[i]);
-	   if(i % 4 == 0)
-		   printf("\n");
-   }
-   
-   write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE6);
-   for(j=0; j<60; j++)
-   {
-	   bank_a[j+60] = read_reg16(j*2 + 0x08);
-	   printf("bank_a[%d] = %d \t", j+60, bank_a[j]);
-	   if(j % 4 == 0)
-		   printf("\n");
-   }
-   write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
-
-
-
-		   
 }
 
 ADIS16488_gyro::ADIS16488_gyro(ADIS16488 *parent, const char *path) :
 	CDev("ADIS16488_gyro", path),
 	_parent(parent),
 	_gyro_topic(nullptr),
+	_gyro_topic_adis16488(nullptr),
 	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
@@ -2562,6 +2524,7 @@ ADIS16488_mag::ADIS16488_mag(ADIS16488 *parent, const char *path) :
 	CDev("ADIS16488_mag", path),
 	_parent(parent),
 	_mag_topic(nullptr),
+	_mag_topic_adis16488(nullptr),
 	_mag_orb_class_instance(-1),
 	_mag_class_instance(-1)
 {
@@ -2864,8 +2827,6 @@ info()
 	printf("state @ %p\n", g_dev);
 	g_dev->print_info();
 
-	usleep(10000);
-
 	exit(0);
 }
 
@@ -2955,4 +2916,3 @@ adis16448_main(int argc, char *argv[])
 	adis16488::usage();
  	errx(1, "unrecognized command, try 'start', 'test', 'reset', 'info' or 'info_cal'");
 }
-

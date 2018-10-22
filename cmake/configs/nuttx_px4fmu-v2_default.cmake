@@ -16,7 +16,7 @@ set(config_module_list
 	drivers/barometer/ms5611
 	#drivers/blinkm
 	#drivers/bst
-	drivers/camera_trigger
+#	drivers/camera_trigger
 	#drivers/differential_pressure/ets
 	drivers/differential_pressure/ms4525
 	drivers/differential_pressure/ms5525
@@ -32,7 +32,7 @@ set(config_module_list
 	#drivers/frsky_telemetry
 	drivers/gps
 	#drivers/hott
-	#drivers/imu/adis16448
+	drivers/imu/adis16448
 	#drivers/imu/bmi160
 	drivers/imu/l3gd20
 	drivers/imu/lsm303d
@@ -98,7 +98,7 @@ set(config_module_list
 	#
 	# General system control
 	#
-	modules/camera_feedback
+#	modules/camera_feedback
 	modules/commander
 	modules/events
 	#modules/gpio_led

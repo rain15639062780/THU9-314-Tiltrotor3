@@ -1,3 +1,4 @@
+
 /****************************************************************************
  *
  *   Copyright (c) 2013-2015 PX4 Development Team. All rights reserved.
@@ -2062,7 +2063,6 @@ lsm303d_main(int argc, char *argv[])
 
 	/*
 	 * Start/load the driver.
-
 	 */
 	if (!strcmp(verb, "start")) {
 		lsm303d::start(external_bus, rotation, accel_range);
@@ -2105,3 +2105,4 @@ lsm303d_main(int argc, char *argv[])
 
 	errx(1, "unrecognized command, try 'start', 'test', 'reset', 'info', 'testerror' or 'regdump'");
 }
+

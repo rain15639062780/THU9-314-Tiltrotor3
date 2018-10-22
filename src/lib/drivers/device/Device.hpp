@@ -187,7 +187,8 @@ protected:
 
 	const char	*_name;			/**< driver name */
 	bool		_debug_enabled{false};		/**< if true, debug messages are printed */
-
+	//rain 2018-8-30
+	//bool		_debug_enabled{true};		/**< if true, debug messages are printed */
 	Device(const char *name) : _name(name)
 	{
 		/* setup a default device ID. When bus_type is UNKNOWN the

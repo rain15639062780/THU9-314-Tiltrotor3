@@ -136,6 +136,12 @@ then
 	# Internal SPI bus ICM-20608-G
 	mpu6000 -T 20608 start
 
+	#rain 2018-9-12
+	#add user imu start
+	# Internal SPI bus ADIS16448-RAIN
+	adis16448 start
+
+
 	# V3 build hwtypecmp supports V2|V2M|V30
 	if ver hwtypecmp V30
 	then

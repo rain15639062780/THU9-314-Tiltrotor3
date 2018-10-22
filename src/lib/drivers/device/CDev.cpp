@@ -109,6 +109,8 @@ CDev::register_class_devname(const char *class_devname)
 		return ret;
 	}
 
+	warnx("CDev::class_instance %d", class_instance);
+	warnx("rain:CDev::register_class_devname");
 	return class_instance;
 }
 

@@ -52,6 +52,17 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_command_ack.h>
 
+//rain 2018-9-11
+//add user topics header
+#include <uORB/topics/sensor_gyro_adis16488.h>
+#include <uORB/topics/sensor_accel_adis16488.h>
+#include <uORB/topics/sensor_mag_adis16488.h>
+#include <uORB/topics/sensor_accel_mpu6000.h>
+#include <uORB/topics/sensor_gyro_mpu6000.h>
+//rain 2018-10-13
+//add euler_mag header
+#include <uORB/topics/vehicle_euler.h>
+
 #include <drivers/drv_hrt.h>
 #include <px4_includes.h>
 #include <px4_getopt.h>
@@ -88,6 +99,12 @@ typedef decltype(statfs::f_bavail) px4_statfs_buf_f_bavail_t;
 #undef DBGPRINT
 #endif /* defined(__PX4_DARWIN) */
 #endif /* defined(DBGPRINT) */
+
+
+//rain 2018-9-11
+//user topic log enable switch
+//1:ENABLE,0:DISABLE
+#define USER_TOPIC_ENABLE	0
 
 using namespace px4::logger;
 
@@ -649,6 +666,28 @@ void Logger::add_default_topics()
 	add_topic("vehicle_vision_position");
 	add_topic("vtol_vehicle_status", 200);
 	add_topic("wind_estimate", 200);
+
+	//rain 2018-9-11
+	//add user topics
+
+	if(1==USER_TOPIC_ENABLE){
+	
+		add_topic("sensor_gyro_adis16488");
+		add_topic("sensor_accel_adis16488");
+		add_topic("sensor_mag_adis16488");
+		//add_topic("sensor_gyro_mpu6000");
+		//add_topic("sensor_accel_mpu6000");
+	}
+
+	//rain 2018-10-13
+	//add euler_mag topic
+	//add_topic("vehicle_euler");
+
+	/*yun 2018-10-16. angular_acceleration */
+	//add_topic("angular_acceleration", 100); 
+
+
+
 
 #ifdef CONFIG_ARCH_BOARD_SITL
 	add_topic("actuator_armed");
