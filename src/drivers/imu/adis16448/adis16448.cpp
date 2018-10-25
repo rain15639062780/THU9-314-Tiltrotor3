@@ -81,6 +81,19 @@
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/conversion/rotation.h>
 
+//rain 2018-9-11 08:56:42
+//add user topics header
+#include <uORB/topics/sensor_gyro_adis16488.h>
+#include <uORB/topics/sensor_accel_adis16488.h>
+#include <uORB/topics/sensor_mag_adis16488.h>
+
+//rain 2018-9-11 08:55:25
+//user topic log enable switch
+//1：enable,0:disable
+#define USER_TOPIC_LOG_ENABLE	0
+
+
+
 #define DIR_READ				0x00
 #define DIR_WRITE				0x80
 
@@ -348,6 +361,7 @@ private:
 
 
 	orb_advert_t		_accel_topic;
+	orb_advert_t        _accel_topic_adis16488;
 	int					_accel_orb_class_instance;
 	int					_accel_class_instance;
 
@@ -584,6 +598,8 @@ protected:
 private:
 	ADIS16488			*_parent;
 	orb_advert_t		_gyro_topic;
+	orb_advert_t       _gyro_topic_adis16488;
+	
 	int					_gyro_orb_class_instance;
 	int					_gyro_class_instance;
 
@@ -616,6 +632,7 @@ protected:
 private:
 	ADIS16488			*_parent;
 	orb_advert_t		_mag_topic;
+	orb_advert_t		_mag_topic_adis16488;
 	int					_mag_orb_class_instance;
 	int					_mag_class_instance;
 
@@ -657,6 +674,7 @@ ADIS16488::ADIS16488(int bus, const char *path_accel, const char *path_gyro, con
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),	
 	_accel_topic(nullptr),
+	_accel_topic_adis16488(nullptr),
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 
@@ -919,6 +937,28 @@ ADIS16488::init()
 	if (_mag->_mag_topic == nullptr) {
 		warnx("ADVERT FAIL");
 	}
+	
+	//add user topic advertise
+
+	if(1 == USER_TOPIC_LOG_ENABLE){
+		_gyro->_gyro_topic_adis16488 = orb_advertise(ORB_ID(sensor_gyro_adis16488), &grp);
+
+		if (_gyro->_gyro_topic_adis16488 == nullptr) {
+			warnx("_gyro_topicadis16488 ADVERT FAIL");
+		}	
+		_accel_topic_adis16488 = orb_advertise(ORB_ID(sensor_accel_adis16488), &arp);
+
+		if (_accel_topic_adis16488 == nullptr) {
+			warnx("_accel_topicadis16488 ADVERT FAIL");
+		}	
+		_mag->_mag_topic_adis16488 = orb_advertise(ORB_ID(sensor_mag_adis16488), &mrp);
+
+		if (_mag->_mag_topic_adis16488 == nullptr) {
+			warnx("_mag_topicadis16488 ADVERT FAIL");
+		}	
+
+	}	
+	
 
 /**/
 
@@ -2039,14 +2079,16 @@ ADIS16488::measure()
 		poll_notify(POLLIN);
 	}
 */
+
 	if (accel_notify && !(_pub_blocked)) {
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
 
+		if(1==USER_TOPIC_LOG_ENABLE){
+		orb_publish(ORB_ID(sensor_accel_adis16488), _accel_topic_adis16488, &arb);
 
-		//perf_count(_accel_reads);
+		}
 	}
-
 
 	//rain2018-9-4 09:43:05
 	//读取计数
@@ -2249,6 +2291,12 @@ ADIS16488::gyro_measure()
 	if (gyro_notify && !(_pub_blocked)) {
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
+		if(1==USER_TOPIC_LOG_ENABLE){
+			orb_publish(ORB_ID(sensor_gyro_adis16488), _gyro->_gyro_topic_adis16488, &grb);
+
+		}		
+		
+		
 	}
 
 
@@ -2396,6 +2444,12 @@ ADIS16488::mag_measure()
 	if (!(_pub_blocked)) {			// * Mag data validity bit (bit 8 DIAG_STAT) * /
 		// * publish it * /
 		orb_publish(ORB_ID(sensor_mag), _mag->_mag_topic, &mrb);
+		
+		if(1==USER_TOPIC_LOG_ENABLE){
+			orb_publish(ORB_ID(sensor_mag_adis16488), _mag->_mag_topic_adis16488, &mrb);
+
+		}		
+		
 	}
 
 
@@ -2500,6 +2554,7 @@ ADIS16488_gyro::ADIS16488_gyro(ADIS16488 *parent, const char *path) :
 	CDev("ADIS16488_gyro", path),
 	_parent(parent),
 	_gyro_topic(nullptr),
+	_gyro_topic_adis16488(nullptr),
 	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
@@ -2562,6 +2617,7 @@ ADIS16488_mag::ADIS16488_mag(ADIS16488 *parent, const char *path) :
 	CDev("ADIS16488_mag", path),
 	_parent(parent),
 	_mag_topic(nullptr),
+	_mag_topic_adis16488(nullptr),
 	_mag_orb_class_instance(-1),
 	_mag_class_instance(-1)
 {
