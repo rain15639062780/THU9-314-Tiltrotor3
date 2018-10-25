@@ -626,8 +626,8 @@ void Logger::add_default_topics()
 	add_topic("airspeed", 200);
 	add_topic("att_pos_mocap", 50);
 	add_topic("battery_status", 500);
-	add_topic("camera_capture");
-	add_topic("camera_trigger");
+	//add_topic("camera_capture");
+	//add_topic("camera_trigger");
 	add_topic("cpuload");
 	add_topic("distance_sensor", 100);
 	add_topic("ekf2_innovations", 200);
@@ -638,9 +638,9 @@ void Logger::add_default_topics()
 	add_topic("input_rc", 200);
 	add_topic("landing_target_pose");
 	add_topic("manual_control_setpoint", 200);
-	add_topic("mission");
-	add_topic("mission_result");
-	add_topic("optical_flow", 50);
+	//add_topic("mission");
+	//add_topic("mission_result");
+	//add_topic("optical_flow", 50);
 	add_topic("position_setpoint_triplet", 200);
 	add_topic("radio_status");
 	add_topic("rate_ctrl_status", 30);
@@ -665,7 +665,7 @@ void Logger::add_default_topics()
 	add_topic("vehicle_vision_attitude");
 	add_topic("vehicle_vision_position");
 	add_topic("vtol_vehicle_status", 200);
-	add_topic("wind_estimate", 200);
+	//add_topic("wind_estimate", 200);
 
 	//rain 2018-9-11
 	//add user topics
@@ -675,8 +675,8 @@ void Logger::add_default_topics()
 		add_topic("sensor_gyro_adis16488");
 		add_topic("sensor_accel_adis16488");
 		add_topic("sensor_mag_adis16488");
-		//add_topic("sensor_gyro_mpu6000");
-		//add_topic("sensor_accel_mpu6000");
+		add_topic("sensor_gyro_mpu6000");
+		add_topic("sensor_accel_mpu6000");
 	}
 
 	//rain 2018-10-13
