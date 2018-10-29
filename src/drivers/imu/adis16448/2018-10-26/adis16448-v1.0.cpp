@@ -120,6 +120,15 @@
 #define ADIS16488_PAGEC  	0x0C  /* ADIS16488 PAGE ID */
 
 
+
+
+
+
+
+
+
+
+
 //rain 2018-8-29 17:01:58
 //  ADIS16488  page0 registers
 #define ADIS16488_TEMP_OUT  	0x0E  /* ADIS16488 temperature output */
@@ -237,20 +246,16 @@
 //ADIS16488 OUTPUT RATE
 #define ADIS16488_ACCEL_MAX_RATE              1000
 #define ADIS16488_ACCEL_DEFAULT_RATE			1000	//modify accel speed to 800hz0
-#define ADIS16488_ACCEL_OUTPUT_RATE             280//410//1000//410
-#define ADIS16488_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	10//30
-
+#define ADIS16488_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	30
 
 #define ADIS16488_GYRO_MAX_RATE               1000
 #define ADIS16488_GYRO_DEFAULT_RATE					1000
-#define ADIS16488_GYRO_OUTPUT_RATE             ADIS16488_ACCEL_OUTPUT_RATE//1000//410
-#define ADIS16488_GYRO_DEFAULT_DRIVER_FILTER_FREQ	10//30
+#define ADIS16488_GYRO_DEFAULT_DRIVER_FILTER_FREQ	30
 
 #define ADIS16488_MAG_MAX_SAMPLE_RATE						102.5f
 #define ADIS16488_MAG_MAX_RATE                102
-#define ADIS16488_MAG_DEFAULT_RATE		100//1000	//  100
-#define ADIS16488_MAG_OUTPUT_RATE            100// ADIS16488_ACCEL_OUTPUT_RATE
-#define ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ	10//30
+#define ADIS16488_MAG_DEFAULT_RATE					100
+#define ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ	30
 
 
 
@@ -267,12 +272,8 @@
 #define GYRODYNAMICRANGE							450.0f
 #define MAGDYNAMICRANGE								3.2767f
 
-//是否启用 LowPassFilter2p.cpp  
-#define FW_FILTER				true//false //true
-//是否使用IMU内置滤波器库
-#define ADIS16448_CORE_EILTER_ENABLE            true //true  //false
-//使用的 IMU内置滤波器库
-#define ADIS16448_CORE_EILTER_USE               ADIS16488_FILTER_B
+#define FW_FILTER									false
+
 
 #define ADIS16488_ACCEL_TIMER_REDUCTION				0//400
 #define ADIS16488_GYRO_TIMER_REDUCTION				0//200
@@ -677,9 +678,9 @@ ADIS16488::ADIS16488(int bus, const char *path_accel, const char *path_gyro, con
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 
-	_gyro_sample_rate(1000),	
-	_accel_sample_rate(1000),	
-	_mag_sample_rate(1000),	
+	_gyro_sample_rate(100),	
+	_accel_sample_rate(100),	
+	_mag_sample_rate(100),	
 	/* Init sampling frequency set to 100Hz */
 	_gyro_reads(perf_alloc(PC_COUNT, "adis16488_gyro_read")),
 	_accel_reads(perf_alloc(PC_COUNT, "adis16488_accel_read")),
@@ -700,9 +701,9 @@ ADIS16488::ADIS16488(int bus, const char *path_accel, const char *path_gyro, con
 	_mag_filter_x(ADIS16488_MAG_DEFAULT_RATE, ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ),
 	_mag_filter_y(ADIS16488_MAG_DEFAULT_RATE, ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ),
 	_mag_filter_z(ADIS16488_MAG_DEFAULT_RATE, ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ),
-	_accel_int(1000000 / ADIS16488_ACCEL_OUTPUT_RATE, true),
-	_gyro_int(1000000 / ADIS16488_GYRO_OUTPUT_RATE, true),
-	_mag_int(1000000 / ADIS16488_MAG_OUTPUT_RATE, true),
+	_accel_int(1000000 / ADIS16488_ACCEL_MAX_RATE, true),
+	_gyro_int(1000000 / ADIS16488_GYRO_MAX_RATE, true),
+	_mag_int(1000000 / ADIS16488_MAG_MAX_RATE, true),
 	_constant_accel_count(0),
 	_constant_gyro_count(0),
 	_last_temperature_raw(0),
@@ -999,40 +1000,39 @@ int ADIS16488::reset()
 
 	//rain 2018-10-17
 	//add adis16488 (自带)滤波器库使能
-	if(ADIS16448_CORE_EILTER_ENABLE)
-	{
-		uint filer_data = 0x00;
-		//            GYRO-X | GYRO-Y  | GYRO-Z  | ACC-X   | ACC-Y    | NONE
-		//--------------------------------------------------------------------
-		//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X04<<12 | 0<<15;
-/*
-		filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-			    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-			    | ADIS16488_FILTER_EN_B << 12 | 0X00 << 15;
-*/
+/*	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
+	write_reg16(ADIS16488_FILTER_BNK_0, ADIS16488_FILTER_A);
+	write_reg16(ADIS16488_FILTER_BNK_1, ADIS16488_FILTER_A);
+	*/
 
-		filer_data =  ADIS16448_CORE_EILTER_USE << 0 | ADIS16448_CORE_EILTER_USE << 3   \
-			    | ADIS16448_CORE_EILTER_USE << 6 | ADIS16448_CORE_EILTER_USE << 9   \
-			    | ADIS16448_CORE_EILTER_USE << 12 | 0X00 << 15;		
-		write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
-		write_reg16(ADIS16488_FILTER_BNK_0, filer_data);
+  
+	
+	uint filer_data = 0x00;
+	//            GYRO-X | GYRO-Y  | GYRO-Z  | ACC-X   | ACC-Y    | NONE
+	//--------------------------------------------------------------------
+	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X04<<12 | 0<<15;
+	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
+		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
+		    | ADIS16488_FILTER_EN_B << 12 | 0X00 << 15;
 
-		//            ACC-Z  | MAG-X   | MAG-Y   | MAG-Z   | NONE
-		//-------------------------------------------------------------
-		//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X00<<12 ;
-		/*
-		filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-			    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-			    | 0X00 << 12;
-		 */
-		filer_data =  ADIS16448_CORE_EILTER_USE << 0 | ADIS16448_CORE_EILTER_USE << 3   \
-			    | ADIS16448_CORE_EILTER_USE << 6 | ADIS16448_CORE_EILTER_USE << 9   \
-			    | 0X00 << 12;
 
-		write_reg16(ADIS16488_FILTER_BNK_1, filer_data);
-		write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
+				
+	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
+	write_reg16(ADIS16488_FILTER_BNK_0, filer_data);
 
-	}
+	//            ACC-Z  | MAG-X   | MAG-Y   | MAG-Z   | NONE
+	//-------------------------------------------------------------
+	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X00<<12 ;
+	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
+		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
+		    | 0X00 << 12;
+
+	
+	write_reg16(ADIS16488_FILTER_BNK_1, filer_data);
+	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
+
+	
+	
 
 	
 
@@ -1828,13 +1828,13 @@ ADIS16488::start()
 	_mag_reports->flush();
 
 	/* start polling at the specified rate */
-	
+	//	hrt_call_every(&_accel_call, 80000, 90000, (hrt_callout)&ADIS16488::measure_trampoline, this);
 	hrt_call_every(&_accel_call, 1000, _accel_call_interval - ADIS16488_ACCEL_TIMER_REDUCTION, (hrt_callout)&ADIS16488::measure_trampoline, this);
-	hrt_call_every(&_gyro_call, 1000, _gyro_call_interval - ADIS16488_GYRO_TIMER_REDUCTION, (hrt_callout)&ADIS16488::gyro_measure_trampoline, this);
-	hrt_call_every(&_mag_call, 1000, _mag_call_interval, (hrt_callout)&ADIS16488::mag_measure_trampoline, this);
+	hrt_call_every(&_gyro_call, 1500, _gyro_call_interval - ADIS16488_GYRO_TIMER_REDUCTION, (hrt_callout)&ADIS16488::gyro_measure_trampoline, this);
+	hrt_call_every(&_mag_call, 2000, _mag_call_interval, (hrt_callout)&ADIS16488::mag_measure_trampoline, this);
 
-	//hrt_call_every(&_gyro_call, 3000, 4000, (hrt_callout)&ADIS16488::gyro_measure_trampoline, this);
-	//hrt_call_every(&_mag_call, 1000, 3000, (hrt_callout)&ADIS16488::mag_measure_trampoline, this);
+	//	hrt_call_every(&_gyro_call, 3000, 4000, (hrt_callout)&ADIS16488::gyro_measure_trampoline, this);
+	//  hrt_call_every(&_mag_call, 1000, 3000, (hrt_callout)&ADIS16488::mag_measure_trampoline, this);
 
 	warnx("hrt_call_every SUCCESS pass") ;
 
@@ -1997,7 +1997,35 @@ ADIS16488::measure()
 	float y_in_new = ((yraw_f * _accel_range_scale) - _accel_scale.y_offset) * _accel_scale.y_scale;
 	float z_in_new = ((zraw_f * _accel_range_scale) - _accel_scale.z_offset) * _accel_scale.z_scale;
 
+	/*
+	  we have logs where the accelerometers get stuck at a fixed
+	  large value. We want to detect this and mark the sensor as
+	  being faulty
+	 */
+	//rain 2018-10-22  delete this code, it does not work
+/*	if (fabsf(_last_accel[0] - x_in_new) < 0.001f &&
+	    fabsf(_last_accel[1] - y_in_new) < 0.001f &&
+	    fabsf(_last_accel[2] - z_in_new) < 0.001f &&
+	    fabsf(x_in_new) > 18.0f &&
+	    fabsf(y_in_new) > 18.0f &&
+	    fabsf(z_in_new) > 18.0f) {
+		_constant_accel_count += 1;
 
+	} else {
+		_constant_accel_count = 0;
+	}
+
+	if (_constant_accel_count > 100) {
+		// we've had 100 constant accel readings with large
+		// values. The sensor is almost certainly dead. We
+		// will raise the error_count so that the top level
+		// flight code will know to avoid this sensor, but
+		// we'll still give the data so that it can be logged
+		// and viewed
+		perf_count(_accel_bad_transfers);
+		_constant_accel_count = 0;
+	}
+*/
 	_last_accel[0] = x_in_new;
 	_last_accel[1] = y_in_new;
 	_last_accel[2] = z_in_new;
@@ -2039,7 +2067,7 @@ ADIS16488::measure()
 
 
 //	if (accel_notify) {
-//		poll_notify(POLLIN);
+		//poll_notify(POLLIN);
 //		;
 //	}
 
@@ -2047,10 +2075,10 @@ ADIS16488::measure()
 	//此处的代码限制了acc速率的更新
 	//poll_notify() just check other event 
 	// * notify anyone waiting for data * /
-	if (accel_notify) {
+/*	if (accel_notify) {
 		poll_notify(POLLIN);
 	}
-
+*/
 
 	if (accel_notify && !(_pub_blocked)) {
 		// * publish it * /
@@ -2179,7 +2207,35 @@ ADIS16488::gyro_measure()
 	float y_gyro_in_new = ((yraw_f * _gyro_range_scale)  - _gyro_scale.y_offset) * _gyro_scale.y_scale;
 	float z_gyro_in_new = ((zraw_f * _gyro_range_scale)  - _gyro_scale.z_offset) * _gyro_scale.z_scale;
 
+	/*
+	  we have logs where the accelerometers get stuck at a fixed
+	  large value. We want to detect this and mark the sensor as
+	  being faulty
+	 */
+	//rain 2018-10-22  delete this code, it does not work
+/*	if (fabsf(_last_gyro[0] - x_gyro_in_new) < 0.03f &&
+	    fabsf(_last_gyro[1] - y_gyro_in_new) < 0.03f &&
+	    fabsf(_last_gyro[2] - z_gyro_in_new) < 0.03f &&
+	    fabsf(x_gyro_in_new) > 450.0f &&
+	    fabsf(y_gyro_in_new) > 450.0f &&
+	    fabsf(z_gyro_in_new) > 450.0f) {
+		_constant_gyro_count += 1;
 
+	} else {
+		_constant_gyro_count = 0;
+	}
+
+	if (_constant_gyro_count > 100) {
+		// we've had 100 constant accel readings with large
+		// values. The sensor is almost certainly dead. We
+		// will raise the error_count so that the top level
+		// flight code will know to avoid this sensor, but
+		// we'll still give the data so that it can be logged
+		// and viewed
+		perf_count(_gyro_bad_transfers);
+		_constant_accel_count = 0;
+	}
+*/
 	_last_gyro[0] = x_gyro_in_new;
 	_last_gyro[1] = y_gyro_in_new;
 	_last_gyro[2] = z_gyro_in_new;

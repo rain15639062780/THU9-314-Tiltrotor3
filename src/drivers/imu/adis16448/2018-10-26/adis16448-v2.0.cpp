@@ -238,19 +238,19 @@
 #define ADIS16488_ACCEL_MAX_RATE              1000
 #define ADIS16488_ACCEL_DEFAULT_RATE			1000	//modify accel speed to 800hz0
 #define ADIS16488_ACCEL_OUTPUT_RATE             280//410//1000//410
-#define ADIS16488_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	10//30
+#define ADIS16488_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	30
 
 
 #define ADIS16488_GYRO_MAX_RATE               1000
 #define ADIS16488_GYRO_DEFAULT_RATE					1000
 #define ADIS16488_GYRO_OUTPUT_RATE             ADIS16488_ACCEL_OUTPUT_RATE//1000//410
-#define ADIS16488_GYRO_DEFAULT_DRIVER_FILTER_FREQ	10//30
+#define ADIS16488_GYRO_DEFAULT_DRIVER_FILTER_FREQ	30
 
 #define ADIS16488_MAG_MAX_SAMPLE_RATE						102.5f
 #define ADIS16488_MAG_MAX_RATE                102
 #define ADIS16488_MAG_DEFAULT_RATE		100//1000	//  100
 #define ADIS16488_MAG_OUTPUT_RATE            100// ADIS16488_ACCEL_OUTPUT_RATE
-#define ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ	10//30
+#define ADIS16488_MAG_DEFAULT_DRIVER_FILTER_FREQ	30
 
 
 
@@ -268,11 +268,8 @@
 #define MAGDYNAMICRANGE								3.2767f
 
 //是否启用 LowPassFilter2p.cpp  
-#define FW_FILTER				true//false //true
-//是否使用IMU内置滤波器库
-#define ADIS16448_CORE_EILTER_ENABLE            true //true  //false
-//使用的 IMU内置滤波器库
-#define ADIS16448_CORE_EILTER_USE               ADIS16488_FILTER_B
+#define FW_FILTER								false	//true
+
 
 #define ADIS16488_ACCEL_TIMER_REDUCTION				0//400
 #define ADIS16488_GYRO_TIMER_REDUCTION				0//200
@@ -999,40 +996,39 @@ int ADIS16488::reset()
 
 	//rain 2018-10-17
 	//add adis16488 (自带)滤波器库使能
-	if(ADIS16448_CORE_EILTER_ENABLE)
-	{
-		uint filer_data = 0x00;
-		//            GYRO-X | GYRO-Y  | GYRO-Z  | ACC-X   | ACC-Y    | NONE
-		//--------------------------------------------------------------------
-		//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X04<<12 | 0<<15;
-/*
-		filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-			    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-			    | ADIS16488_FILTER_EN_B << 12 | 0X00 << 15;
-*/
+/*	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
+	write_reg16(ADIS16488_FILTER_BNK_0, ADIS16488_FILTER_A);
+	write_reg16(ADIS16488_FILTER_BNK_1, ADIS16488_FILTER_A);
+	*/
 
-		filer_data =  ADIS16448_CORE_EILTER_USE << 0 | ADIS16448_CORE_EILTER_USE << 3   \
-			    | ADIS16448_CORE_EILTER_USE << 6 | ADIS16448_CORE_EILTER_USE << 9   \
-			    | ADIS16448_CORE_EILTER_USE << 12 | 0X00 << 15;		
-		write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
-		write_reg16(ADIS16488_FILTER_BNK_0, filer_data);
+  
+	
+	uint filer_data = 0x00;
+	//            GYRO-X | GYRO-Y  | GYRO-Z  | ACC-X   | ACC-Y    | NONE
+	//--------------------------------------------------------------------
+	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X04<<12 | 0<<15;
+	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
+		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
+		    | ADIS16488_FILTER_EN_B << 12 | 0X00 << 15;
 
-		//            ACC-Z  | MAG-X   | MAG-Y   | MAG-Z   | NONE
-		//-------------------------------------------------------------
-		//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X00<<12 ;
-		/*
-		filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
-			    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
-			    | 0X00 << 12;
-		 */
-		filer_data =  ADIS16448_CORE_EILTER_USE << 0 | ADIS16448_CORE_EILTER_USE << 3   \
-			    | ADIS16448_CORE_EILTER_USE << 6 | ADIS16448_CORE_EILTER_USE << 9   \
-			    | 0X00 << 12;
 
-		write_reg16(ADIS16488_FILTER_BNK_1, filer_data);
-		write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
+				
+	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE3);
+	write_reg16(ADIS16488_FILTER_BNK_0, filer_data);
 
-	}
+	//            ACC-Z  | MAG-X   | MAG-Y   | MAG-Z   | NONE
+	//-------------------------------------------------------------
+	//filer_data = 0X04<<0 | 0X04<<3 | 0X04<<6 | 0X04<<9 | 0X00<<12 ;
+	filer_data =  ADIS16488_FILTER_EN_B << 0 | ADIS16488_FILTER_EN_B << 3   \
+		    | ADIS16488_FILTER_EN_B << 6 | ADIS16488_FILTER_EN_B << 9   \
+		    | 0X00 << 12;
+
+	
+	write_reg16(ADIS16488_FILTER_BNK_1, filer_data);
+	write_reg16(ADIS16488_PAGE_ADDR, ADIS16488_PAGE0);
+
+	
+	
 
 	
 
@@ -2039,7 +2035,7 @@ ADIS16488::measure()
 
 
 //	if (accel_notify) {
-//		poll_notify(POLLIN);
+		//poll_notify(POLLIN);
 //		;
 //	}
 
@@ -2047,10 +2043,10 @@ ADIS16488::measure()
 	//此处的代码限制了acc速率的更新
 	//poll_notify() just check other event 
 	// * notify anyone waiting for data * /
-	if (accel_notify) {
+/*	if (accel_notify) {
 		poll_notify(POLLIN);
 	}
-
+*/
 
 	if (accel_notify && !(_pub_blocked)) {
 		// * publish it * /
