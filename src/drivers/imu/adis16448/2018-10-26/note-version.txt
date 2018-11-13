@@ -1,0 +1,16 @@
+@18-10-26 9:44
+#adis16448-v1.0.cpp
+#修改前备份
+
+
+@018-10-29 12:20
+#adis16448-v2.0.cpp
+#修改accel,gyro,的topic发布频率为280Hz
+#添加accel和gyro的低通滤波器，(未使能)低通滤波器
+
+@2018-10-29
+#adis16488-v3.0.cpp
+#1.将imu内置滤波器的使用改为宏模式，
+#2.设置accel.gyro二阶低通滤波器截止频率为10Hz
+#3.解决了accel_measure()函数中因poll_notify(POLLIN)使用造成的阻塞问题。
+

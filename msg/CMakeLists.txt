@@ -137,11 +137,29 @@ set(msg_files
 	vehicle_trajectory_waypoint.msg
 	vtol_vehicle_status.msg
 	wind_estimate.msg
+<<<<<<< HEAD
 	#rain 2018-9-21
 	sever_nozzle_rx.msg
 	sever_nozzle_rx2.msg
 	sever_nozzle_tx.msg
 
+=======
+
+	#rain 2018-9-11
+	#add user xx.msg
+	sensor_gyro_adis16488.msg
+	sensor_accel_adis16488.msg
+	sensor_mag_adis16488.msg
+	sensor_accel_mpu6000.msg
+	sensor_gyro_mpu6000.msg
+	
+	#rain 2018-10-13
+	#add eulor_msg
+	vehicle_euler.msg
+
+	#yun 2018-10-16
+	angular_acceleration.msg
+>>>>>>> de93b51e8e2c6833d1850e07206163ddd879e721
 
 	)
 

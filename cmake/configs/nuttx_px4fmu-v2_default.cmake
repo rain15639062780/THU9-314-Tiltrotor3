@@ -32,7 +32,7 @@ set(config_module_list
 	#drivers/frsky_telemetry
 	drivers/gps
 	#drivers/hott
-	#drivers/imu/adis16448
+	drivers/imu/adis16448
 	#drivers/imu/bmi160
 	drivers/imu/l3gd20
 	drivers/imu/lsm303d
@@ -103,7 +103,7 @@ set(config_module_list
 	#
 	# General system control
 	#
-	modules/camera_feedback
+#	modules/camera_feedback
 	modules/commander
 	modules/events
 	#modules/gpio_led

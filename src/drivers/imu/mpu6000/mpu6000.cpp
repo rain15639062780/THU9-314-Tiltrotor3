@@ -1,3 +1,4 @@
+
 /****************************************************************************
  *
  *   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
@@ -94,6 +95,16 @@
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/conversion/rotation.h>
 
+//rain 2018-9-11 08:56:42
+//add user topics header
+#include <uORB/topics/sensor_gyro_mpu6000.h>
+#include <uORB/topics/sensor_accel_mpu6000.h>
+
+//rain 2018-9-11 08:55:25
+//user topic log enable switch
+//1：enable,0:disable
+#define USER_TOPIC_LOG_ENABLE	0
+
 #include "mpu6000.h"
 
 /*
@@ -101,11 +112,9 @@
   sample rate and then throw away duplicates by comparing
   accelerometer values. This time reduction is enough to cope with
   worst case timing jitter due to other timers
-
   I2C bus is running at 100 kHz Transaction time is 2.163ms
   I2C bus is running at 400 kHz (304 kHz actual) Transaction time
   is 583 us
-
  */
 #define MPU6000_TIMER_REDUCTION				200
 
@@ -190,6 +199,7 @@ private:
 	float			_accel_range_scale;
 	float			_accel_range_m_s2;
 	orb_advert_t		_accel_topic;
+	orb_advert_t        _accel_topic_mpu6000;
 	int			_accel_orb_class_instance;
 	int			_accel_class_instance;
 
@@ -448,6 +458,7 @@ protected:
 private:
 	MPU6000			*_parent;
 	orb_advert_t		_gyro_topic;
+	orb_advert_t		_gyro_topic_mpu6000;
 	int			_gyro_orb_class_instance;
 	int			_gyro_class_instance;
 
@@ -479,6 +490,7 @@ MPU6000::MPU6000(device::Device *interface, const char *path_accel, const char *
 	_accel_range_scale(0.0f),
 	_accel_range_m_s2(0.0f),
 	_accel_topic(nullptr),
+	_accel_topic_mpu6000(nullptr),
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 	_gyro_reports(nullptr),
@@ -735,7 +747,23 @@ MPU6000::init()
 	if (_gyro->_gyro_topic == nullptr) {
 		PX4_WARN("ADVERT FAIL");
 	}
+	//rain
+	//add user topic advertise
 
+	if(1 == USER_TOPIC_LOG_ENABLE){
+		_gyro->_gyro_topic_mpu6000 = orb_advertise(ORB_ID(sensor_gyro_mpu6000), &grp);
+
+		if (_gyro->_gyro_topic_mpu6000 == nullptr) {
+			warnx("_gyro_topic_mpu6000 ADVERT FAIL");
+		}	
+		_accel_topic_mpu6000 = orb_advertise(ORB_ID(sensor_accel_mpu6000), &arp);
+
+		if (_accel_topic_mpu6000 == nullptr) {
+			warnx("_topic_mpu6000 ADVERT FAIL");
+		}	
+
+
+	}
 	return ret;
 }
 
@@ -1974,11 +2002,21 @@ MPU6000::measure()
 	if (accel_notify && !(_pub_blocked)) {
 		/* publish it */
 		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
+		
+		if(1==USER_TOPIC_LOG_ENABLE){
+			orb_publish(ORB_ID(sensor_accel_mpu6000), _accel_topic_mpu6000, &arb);
+
+		}
 	}
 
 	if (gyro_notify && !(_pub_blocked)) {
 		/* publish it */
 		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
+	
+		if(1==USER_TOPIC_LOG_ENABLE){
+		orb_publish(ORB_ID(sensor_gyro_mpu6000), _gyro->_gyro_topic_mpu6000, &grb);
+
+		}
 	}
 
 	/* stop measuring */
@@ -2038,6 +2076,7 @@ MPU6000_gyro::MPU6000_gyro(MPU6000 *parent, const char *path) :
 	CDev("MPU6000_gyro", path),
 	_parent(parent),
 	_gyro_topic(nullptr),
+	_gyro_topic_mpu6000(nullptr),
 	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
@@ -2601,3 +2640,4 @@ mpu6000_main(int argc, char *argv[])
 	mpu6000::usage();
 	return -1;
 }
+

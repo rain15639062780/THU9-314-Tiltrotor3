@@ -52,6 +52,7 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_command_ack.h>
 
+<<<<<<< HEAD
 
 //rain 2018-9-25
 //add sever_nozzle_topic_ulog
@@ -59,6 +60,18 @@
 #include <uORB/topics/sever_nozzle_rx2.h>
 #include <uORB/topics/sever_nozzle_tx.h>
 
+=======
+//rain 2018-9-11
+//add user topics header
+#include <uORB/topics/sensor_gyro_adis16488.h>
+#include <uORB/topics/sensor_accel_adis16488.h>
+#include <uORB/topics/sensor_mag_adis16488.h>
+#include <uORB/topics/sensor_accel_mpu6000.h>
+#include <uORB/topics/sensor_gyro_mpu6000.h>
+//rain 2018-10-13
+//add euler_mag header
+#include <uORB/topics/vehicle_euler.h>
+>>>>>>> de93b51e8e2c6833d1850e07206163ddd879e721
 
 #include <drivers/drv_hrt.h>
 #include <px4_includes.h>
@@ -96,6 +109,12 @@ typedef decltype(statfs::f_bavail) px4_statfs_buf_f_bavail_t;
 #undef DBGPRINT
 #endif /* defined(__PX4_DARWIN) */
 #endif /* defined(DBGPRINT) */
+
+
+//rain 2018-9-11
+//user topic log enable switch
+//1:ENABLE,0:DISABLE
+#define USER_TOPIC_ENABLE	0
 
 using namespace px4::logger;
 
@@ -617,8 +636,13 @@ void Logger::add_default_topics()
 	add_topic("airspeed", 200);
 	add_topic("att_pos_mocap", 50);
 	add_topic("battery_status", 500);
+<<<<<<< HEAD
 //	add_topic("camera_capture");
 //	add_topic("camera_trigger");
+=======
+	//add_topic("camera_capture");
+	//add_topic("camera_trigger");
+>>>>>>> de93b51e8e2c6833d1850e07206163ddd879e721
 	add_topic("cpuload");
 //	add_topic("distance_sensor", 100);
 	add_topic("ekf2_innovations", 200);
@@ -629,9 +653,15 @@ void Logger::add_default_topics()
 	add_topic("input_rc", 200);
 //	add_topic("landing_target_pose");
 	add_topic("manual_control_setpoint", 200);
+<<<<<<< HEAD
 //	add_topic("mission");
 //	add_topic("mission_result");
 //	add_topic("optical_flow", 50);
+=======
+	//add_topic("mission");
+	//add_topic("mission_result");
+	//add_topic("optical_flow", 50);
+>>>>>>> de93b51e8e2c6833d1850e07206163ddd879e721
 	add_topic("position_setpoint_triplet", 200);
 	add_topic("radio_status");
 	add_topic("rate_ctrl_status", 30);
@@ -656,6 +686,7 @@ void Logger::add_default_topics()
 	add_topic("vehicle_vision_attitude");
 	add_topic("vehicle_vision_position");
 	add_topic("vtol_vehicle_status", 200);
+<<<<<<< HEAD
 //	add_topic("wind_estimate", 200);
 
 	//rain 2018-9-25
@@ -663,6 +694,29 @@ void Logger::add_default_topics()
 	add_topic("sever_nozzle_rx");
 	add_topic("sever_nozzle_rx2");
 	add_topic("sever_nozzle_tx");
+=======
+	//add_topic("wind_estimate", 200);
+
+	//rain 2018-9-11
+	//add user topics
+
+	if(1==USER_TOPIC_ENABLE){
+	
+		add_topic("sensor_gyro_adis16488");
+		add_topic("sensor_accel_adis16488");
+		add_topic("sensor_mag_adis16488");
+		add_topic("sensor_gyro_mpu6000");
+		add_topic("sensor_accel_mpu6000");
+	}
+
+	//rain 2018-10-13
+	//add euler_mag topic
+	//add_topic("vehicle_euler");
+
+	/*yun 2018-10-16. angular_acceleration */
+	//add_topic("angular_acceleration", 100); 
+
+>>>>>>> de93b51e8e2c6833d1850e07206163ddd879e721
 
 
 
