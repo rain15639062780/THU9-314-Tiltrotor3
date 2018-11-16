@@ -59,6 +59,10 @@
 #include <uORB/topics/sensor_mag_adis16488.h>
 #include <uORB/topics/sensor_accel_mpu6000.h>
 #include <uORB/topics/sensor_gyro_mpu6000.h>
+//rain 2018-11-14
+//add adc_report topic
+#include <uORB/topics/adc_report.h>
+
 //rain 2018-10-13
 //add euler_mag header
 #include <uORB/topics/vehicle_euler.h>
@@ -686,7 +690,9 @@ void Logger::add_default_topics()
 	/*yun 2018-10-16. angular_acceleration */
 	//add_topic("angular_acceleration", 100); 
 
-
+	//rain 2018-11-16
+	//add adc_report_topic,set sample as the same with power topic
+	//add_topic("adc_report", 100);
 
 
 #ifdef CONFIG_ARCH_BOARD_SITL
