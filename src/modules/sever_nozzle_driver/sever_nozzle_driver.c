@@ -110,7 +110,7 @@ static void usage(const char *reason)
 
 int uart_init(char * uart_name)
 {
-	int serial_fd = open(uart_name, O_RDWR | O_NOCTTY);
+	int serial_fd = open(uart_name, O_RDWR | O_NONBLOCK | O_NOCTTY);
 
 	if (serial_fd < 0) {
 		err(1, "failed to open port: %s", uart_name);
@@ -193,14 +193,14 @@ int sever_update_rxbuf(int fd)
 			if ((uint8_t)buf[i] == 0x55 && (uint8_t)buf[i+1] == 0xAA) {
 				//checksum
 				uint8_t csum = 0;
-				for (int8_t j = 2;j < 7;j++)
+				for (int8_t j = 2;j < 10;j++)
 					csum += (uint8_t) buf[i+j];
-				if (csum != (uint8_t) buf[i+7]) {
+				if (csum != (uint8_t) buf[i+10]) {
 					printf("failed,count=%d\n",count);
 					continue;
 				}
 				//获取舵机号
-				uint8_t tmp = buf[i+6];
+				uint8_t tmp = buf[i+2];
 				uint8_t num = tmp -1;
 				if (num > 1) {
 					printf("failed @!\n");
@@ -210,10 +210,10 @@ int sever_update_rxbuf(int fd)
 				//memcpy(&(sever_rxbuf),(buf+i),sizeof(sever_rxbuf));
 				sever_rxbuf.head1 = buf[i];
 				sever_rxbuf.head2 = buf[i+1];
-				sever_rxbuf.pos = (buf[i+2]) | (buf[i+3] << 8);
-				sever_rxbuf.i_main = (buf[i+4]) | (buf[i+5] << 8);
-				sever_rxbuf.moto_num = (buf[i+6] & 0x0f);
-				sever_rxbuf.checksum = (buf[i+7] & 0xff);
+				sever_rxbuf.pos = (buf[i+4]) | (buf[i+5] << 8);
+				sever_rxbuf.i_main = (buf[i+6]) | (buf[i+7] << 8);
+				sever_rxbuf.moto_num = (buf[i+2] & 0x0f);
+				sever_rxbuf.checksum = (buf[i+10] & 0xff);
 				
 				sever_rxbuf.timestamp = hrt_absolute_time();
 
@@ -281,7 +281,7 @@ int pi_uart_thread_main(int argc, char *argv[])
 	//pixhawk serial4-----/dev/ttyS6
 	//pixhack serial2-----/dev/ttyS2
 
-	int uart_fd = uart_init("/dev/ttyS2");
+	int uart_fd = uart_init("/dev/ttyS6");
 	if(false == uart_fd)	
 		return -1;
 	if(false == set_uart_baudrate(uart_fd,57600)){
@@ -297,6 +297,7 @@ int pi_uart_thread_main(int argc, char *argv[])
 
 	sever_nozzle_tx_sub = orb_subscribe(ORB_ID(sever_nozzle_tx));
 
+
 	while(!thread_should_exit){
 
 
@@ -305,7 +306,7 @@ int pi_uart_thread_main(int argc, char *argv[])
 		//读取串口数据
 		ret = sever_update_rxbuf(uart_fd);
 		if(ret < 0){
-			warnx("[rain] recvive dat error");
+			//warnx("[rain] recvive dat error");
 		}else{
 			//publish sever_rxbuf .topic datas
 			//发布舵机反馈的消息
@@ -358,9 +359,10 @@ int pi_uart_thread_main(int argc, char *argv[])
 
 		
 		write(uart_fd,&sever_txbuf[0],sizeof(sever_txbuf[0]));
+		usleep(100);
 		write(uart_fd,&sever_txbuf[1],sizeof(sever_txbuf[1]));
 
-		usleep(500);
+		usleep(2000);
 		//printf("sever_rxbuf\t%x\t%x\t%x\n",sever_rxbuf.head1, sever_rxbuf.head2, sever_rxbuf.checksum);
 		//printf("sever_txbuf\t%x\t%x\t%x\n",sever_txbuf.head1, sever_txbuf.pos_l, sever_txbuf.checksum);
 		//printf("sever_txdata\t%x\t%x\t%x\n",sever_txdata.head1, sever_txdata.pos, sever_txdata.checksum);
