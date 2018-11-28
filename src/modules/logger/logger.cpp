@@ -61,7 +61,7 @@
 #include <uORB/topics/sensor_gyro_mpu6000.h>
 //rain 2018-11-14
 //add adc_report topic
-#include <uORB/topics/adc_report.h>
+//#include <uORB/topics/adc_report.h>
 
 //rain 2018-10-13
 //add euler_mag header
