@@ -362,7 +362,7 @@ int pi_uart_thread_main(int argc, char *argv[])
 		usleep(100);
 		write(uart_fd,&sever_txbuf[1],sizeof(sever_txbuf[1]));
 
-		usleep(2000);
+		usleep(100);
 		//printf("sever_rxbuf\t%x\t%x\t%x\n",sever_rxbuf.head1, sever_rxbuf.head2, sever_rxbuf.checksum);
 		//printf("sever_txbuf\t%x\t%x\t%x\n",sever_txbuf.head1, sever_txbuf.pos_l, sever_txbuf.checksum);
 		//printf("sever_txdata\t%x\t%x\t%x\n",sever_txdata.head1, sever_txdata.pos, sever_txdata.checksum);
