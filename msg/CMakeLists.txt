@@ -145,7 +145,8 @@ set(msg_files
 	sensor_mag_adis16488.msg
 	sensor_accel_mpu6000.msg
 	sensor_gyro_mpu6000.msg
-	
+	sensor_mag_hmc5883.msg
+
 	#rain 2018-10-13
 	#add eulor_msg
 	vehicle_euler.msg

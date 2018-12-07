@@ -90,7 +90,7 @@
 //rain 2018-9-11 08:55:25
 //user topic log enable switch
 //1：enable,0:disable
-#define USER_TOPIC_LOG_ENABLE	0
+#define USER_TOPIC_LOG_ENABLE	1
 
 
 

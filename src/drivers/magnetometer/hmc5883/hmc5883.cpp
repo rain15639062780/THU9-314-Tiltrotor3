@@ -75,6 +75,18 @@
 #include <getopt.h>
 #include <lib/conversion/rotation.h>
 
+//rain 2018-12-3 14:14:08
+//add user topics header
+#include <uORB/topics/sensor_mag_hmc5883.h>
+
+//rain 2018-12-3 14:14:08
+//user topic log enable switch
+//1：enable,0:disable
+#define USER_TOPIC_LOG_ENABLE	1
+
+
+
+
 #include "hmc5883.h"
 
 /*
@@ -165,6 +177,7 @@ private:
 	int			_orb_class_instance;
 
 	orb_advert_t		_mag_topic;
+	orb_advert_t		_mag_topic_hmc5883;
 
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_comms_errors;
@@ -347,6 +360,7 @@ HMC5883::HMC5883(device::Device *interface, const char *path, enum Rotation rota
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_mag_topic(nullptr),
+	_mag_topic_hmc5883(nullptr),
 	_sample_perf(perf_alloc(PC_ELAPSED, "hmc5883_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hmc5883_com_err")),
 	_range_errors(perf_alloc(PC_COUNT, "hmc5883_rng_err")),
@@ -1017,6 +1031,23 @@ HMC5883::collect()
 				DEVICE_DEBUG("ADVERT FAIL");
 			}
 		}
+
+		if(1 == USER_TOPIC_LOG_ENABLE){
+
+			if (_mag_topic_hmc5883 != nullptr) {
+				orb_publish(ORB_ID(sensor_mag_hmc5883), _mag_topic_hmc5883, &new_report);
+			}else{	
+				_mag_topic_hmc5883 = orb_advertise(ORB_ID(sensor_mag_hmc5883), &new_report);
+			
+				if (_mag_topic_hmc5883 == nullptr) {
+					warnx("_mag_topic_hmc5883 ADVERT FAIL");
+				}	
+			}
+		
+		
+		}
+
+	
 	}
 
 	_last_report = new_report;
@@ -1879,3 +1910,4 @@ hmc5883_main(int argc, char *argv[])
 
 	errx(1, "unrecognized command, try 'start', 'test', 'reset' 'calibrate', 'tempoff', 'tempon' or 'info'");
 }
+
