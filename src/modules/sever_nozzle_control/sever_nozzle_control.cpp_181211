@@ -73,7 +73,7 @@
 extern "C" __EXPORT int sever_nozzle_control_main(int argc, char *argv[]);
 
 
-#define SIN_PERIOD	120*1000000//10*1000000   //10s
+#define SIN_PERIOD	240*1000000//10*1000000   //10s
 #define STEP_PERIOD	5*1000000   //2s
 #define RC2_INPUT_HMAX 50       //转换后最大的角度
 
@@ -234,8 +234,8 @@ void sever_nozzle::vehicle_manual_poll()
 
 	//获取数据
 
+	//printf("_manual_control_sp.flaps = %.4f\n",(double) _manual_control_sp.flaps);
 	//printf("_manual_control_sp.aux1 = %.4f\n",(double) _manual_control_sp.aux1);
-	//printf("_manual_control_sp.aux2 = %.4f\n",(double) _manual_control_sp.aux2);
 	//printf("return_switch = 0x%2x\n", _manual_control_sp.return_switch);
 	//printf("offboard_switch = 0x%2x\n", _manual_control_sp.offboard_switch);
 
@@ -288,7 +288,7 @@ void  sever_nozzle::sever_nozzle_calc()
 	if(switch_cmd == 0x11)
 	{
 		Ky_nozzle = (10.0 * (double)_manual_control_sp.aux1)/57.3;//遥控器aux1 -1.0~1.0映射-10~10度 在换成弧度
-		Kn_nozzle = (50.0 * ((double)_manual_control_sp.aux2 * 2.0) )/57.3;//遥控器6 967~1815映射0~100度 在换成弧度
+		Kn_nozzle = (50.0 * ((double)_manual_control_sp.aux2 + 1.0) )/57.3;//遥控器6 967~1815映射0~100度 在换成弧度
 	}else if(switch_cmd == 0x01 || switch_cmd == 0x00 )
 	{
 		//sever_nozzle_step();
