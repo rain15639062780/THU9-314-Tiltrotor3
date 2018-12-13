@@ -281,7 +281,7 @@ int pi_uart_thread_main(int argc, char *argv[])
 	//pixhawk serial4-----/dev/ttyS6
 	//pixhack serial2-----/dev/ttyS2
 
-	int uart_fd = uart_init("/dev/ttyS2");
+	int uart_fd = uart_init("/dev/ttyS6");
 	if(false == uart_fd)	
 		return -1;
 	if(false == set_uart_baudrate(uart_fd,57600)){
