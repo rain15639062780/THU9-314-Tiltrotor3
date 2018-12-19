@@ -108,7 +108,7 @@ typedef decltype(statfs::f_bavail) px4_statfs_buf_f_bavail_t;
 //rain 2018-9-11
 //user topic log enable switch
 //1:ENABLE,0:DISABLE
-#define USER_TOPIC_ENABLE	0
+#define USER_TOPIC_ENABLE	1
 
 using namespace px4::logger;
 
@@ -624,52 +624,52 @@ bool Logger::try_to_subscribe_topic(LoggerSubscription &sub, int multi_instance)
 void Logger::add_default_topics()
 {
 	// Note: try to avoid setting the interval where possible, as it increases RAM usage
-	add_topic("actuator_controls_0");
-	add_topic("actuator_controls_1");
-	add_topic("actuator_outputs");
-	add_topic("airspeed");
+	add_topic("actuator_controls_0", 100);
+	add_topic("actuator_controls_1", 100);
+	add_topic("actuator_outputs", 100);
+	add_topic("airspeed", 200);
 	add_topic("att_pos_mocap", 50);
-	add_topic("battery_status");
+	add_topic("battery_status", 500);
 	//add_topic("camera_capture");
 	//add_topic("camera_trigger");
 	add_topic("cpuload");
 	add_topic("distance_sensor", 100);
-	add_topic("ekf2_innovations");
+	add_topic("ekf2_innovations", 200);
 	add_topic("ekf_gps_drift");
-	add_topic("esc_status");
-	add_topic("estimator_status");
+	add_topic("esc_status", 250);
+	add_topic("estimator_status", 200);
 	add_topic("home_position");
-	add_topic("input_rc");
+	add_topic("input_rc", 200);
 	add_topic("landing_target_pose");
-	add_topic("manual_control_setpoint");
-	add_topic("mission");
-	add_topic("mission_result");
+	add_topic("manual_control_setpoint", 200);
+	//add_topic("mission");
+	//add_topic("mission_result");
 	//add_topic("optical_flow", 50);
-	add_topic("position_setpoint_triplet");
+	add_topic("position_setpoint_triplet", 200);
 	add_topic("radio_status");
-	add_topic("rate_ctrl_status");
-	add_topic("sensor_combined");
-	add_topic("sensor_preflight");
-	add_topic("system_power");
-	add_topic("tecs_status");
+	add_topic("rate_ctrl_status", 30);
+	add_topic("sensor_combined", 100);
+	add_topic("sensor_preflight", 200);
+	add_topic("system_power", 500);
+	add_topic("tecs_status", 200);
 	add_topic("telemetry_status");
-	add_topic("vehicle_attitude");
-	add_topic("vehicle_attitude_setpoint");
+	add_topic("vehicle_attitude", 30);
+	add_topic("vehicle_attitude_setpoint", 100);
 	add_topic("vehicle_command");
-	add_topic("vehicle_global_position");
+	add_topic("vehicle_global_position", 200);
 	add_topic("vehicle_gps_position");
 	add_topic("vehicle_land_detected");
-	add_topic("vehicle_local_position");
-	add_topic("vehicle_local_position_setpoint");
-	add_topic("vehicle_rates_setpoint");
-	add_topic("vehicle_status");
+	add_topic("vehicle_local_position", 100);
+	add_topic("vehicle_local_position_setpoint", 100);
+	add_topic("vehicle_rates_setpoint", 30);
+	add_topic("vehicle_status", 200);
 	add_topic("vehicle_status_flags");
 	add_topic("vehicle_trajectory_waypoint");
 	add_topic("vehicle_trajectory_waypoint_desired");
 	add_topic("vehicle_vision_attitude");
 	add_topic("vehicle_vision_position");
-	add_topic("vtol_vehicle_status");
-	add_topic("wind_estimate");
+	add_topic("vtol_vehicle_status", 200);
+	//add_topic("wind_estimate", 200);
 
 	//rain 2018-9-11
 	//add user topics
@@ -681,6 +681,7 @@ void Logger::add_default_topics()
 		add_topic("sensor_mag_adis16488");
 		add_topic("sensor_gyro_mpu6000");
 		add_topic("sensor_accel_mpu6000");
+		add_topic("sensor_mag_hmc5883");
 	}
 
 	//rain 2018-10-13
