@@ -85,6 +85,10 @@ set(msg_files
 	position_setpoint_triplet.msg
 	power_button_state.msg
 	pwm_input.msg
+	#rain 2018-12-22
+	# 添加pwm_capture消息
+	pwm_capture.msg
+
 	qshell_req.msg
 	qshell_retval.msg
 	radio_status.msg
@@ -152,6 +156,9 @@ set(msg_files
 
 	#yun 2018-10-16
 	angular_acceleration.msg
+
+
+
 
 	)
 

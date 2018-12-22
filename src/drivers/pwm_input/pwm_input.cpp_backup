@@ -41,15 +41,6 @@
  * @author: Ban Siesta <bansiesta@gmail.com>
  */
 
-/**********************************************
-*2018-12-21 rain
-*@file pwm_capture.cpp
-*修改px4源码pwm_input.cpp,使其适配cap口
-*FMU_CAP1-------TIM2_CH1_IN-------PA5
-*FMU_CAP2-------TIM2_CH2_IN-------PB3
-*FMU_CAP3-------TIM2_CH4_IN-------PB11
-*FMU_CAP4在官方给定的引脚对应表中并未查询到（FMUV5）
-**********************************************/
 #include <px4_config.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
@@ -91,17 +82,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
-
-
-
 /* Reset pin define */
-
-//2018-12-21 rain 修改引脚配置
 #define GPIO_VDD_RANGEFINDER_EN GPIO_GPIO5_OUTPUT
-//#define GPIO_VDD_RANGEFINDER_EN GPIO_GPIO5_OUTPUT
-//#define GPIO_VDD_RANGEFINDER_EN GPIO_TIM2_CH2IN_2
-
 
 #if HRT_TIMER == PWMIN_TIMER
 #error cannot share timer between HRT and PWMIN
@@ -713,4 +695,3 @@ int pwm_input_main(int argc, char *argv[])
 	pwmin_usage();
 	return -1;
 }
-

@@ -26,6 +26,10 @@ set(config_module_list
 	drivers/mkblctrl
 	drivers/oreoled
 	drivers/pwm_input
+	#rain 2018-12-22
+	#build pwm_capture.cpp file
+	drivers/pwm_capture
+
 	drivers/pwm_out_sim
 	drivers/px4flow
 	drivers/px4fmu

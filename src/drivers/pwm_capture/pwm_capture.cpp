@@ -43,7 +43,7 @@
 
 /**********************************************
 *2018-12-21 rain
-*@file pwm_capture.cpp
+*@file pwm_capture.cpp  cap_1
 *修改px4源码pwm_input.cpp,使其适配cap口
 *FMU_CAP1-------TIM2_CH1_IN-------PA5
 *FMU_CAP2-------TIM2_CH2_IN-------PB3
@@ -68,7 +68,7 @@
 #include <stdlib.h>
 
 #include <board_config.h>
-#include <drivers/drv_pwm_input.h>
+#include <drivers/drv_pwm_capture_rain.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_range_finder.h>
 
@@ -81,7 +81,7 @@
 #include <systemlib/err.h>
 
 #include <uORB/uORB.h>
-#include <uORB/topics/pwm_input.h>
+#include <uORB/topics/pwm_capture.h>
 
 #include <drivers/drv_device.h>
 #include <drivers/device/device.h>
@@ -91,102 +91,123 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+/***************************************************
+*FMU_CAP1-------TIM2_CH1_IN-------PA5
+*FMU_CAP2-------TIM2_CH2_IN-------PB3
+*FMU_CAP3-------TIM2_CH4_IN-------PB11
 
+PWM Capture
+ *
+ * 3  PWM Capture inputs are configured.
+ *
+ * Pins:
+ *
+ * FMU_CAP1 : PA5  : TIM2_CH1
+ * FMU_CAP2 : PB3  : TIM2_CH2
+ * FMU_CAP3 : PB11 : TIM2_CH4
 
+#define GPIO_TIM2_CH1_IN     PA5   T2C1  FMU_CAP1  GPIO_TIM2_CH1IN_3
+#define GPIO_TIM2_CH2_IN     PB3   T2C2  FMU_CAP2  GPIO_TIM2_CH2IN_2
+#define GPIO_TIM2_CH4_IN     PB11  T2C4  FMU_CAP3  GPIO_TIM2_CH4IN_2
 
+***************************************************/
 
 /* Reset pin define */
 
 //2018-12-21 rain 修改引脚配置
-#define GPIO_VDD_RANGEFINDER_EN GPIO_GPIO5_OUTPUT
-//#define GPIO_VDD_RANGEFINDER_EN GPIO_GPIO5_OUTPUT
-//#define GPIO_VDD_RANGEFINDER_EN GPIO_TIM2_CH2IN_2
+
+//2018-12-22 添加自定义宏，用于适配cap口
+#define RAIN_GPIO_INPUT_CAP		GPIO_INPUT_CAP1
+#define RAIN_INPUT_CAP_TIMER		INPUT_CAP1_TIMER
+#define RAIN_INPUT_CAP_CHANNEL		INPUT_CAP1_CHANNEL
 
 
-#if HRT_TIMER == PWMIN_TIMER
-#error cannot share timer between HRT and PWMIN
+#define GPIO_VDD_RANGEFINDER_EN RAIN_GPIO_INPUT_CAP
+
+#if HRT_TIMER == RAIN_INPUT_CAP_TIMER
+#error cannot share timer between HRT and PWMCAP
 #endif
 
-#if !defined(GPIO_PWM_IN) || !defined(PWMIN_TIMER) || !defined(PWMIN_TIMER_CHANNEL)
-#error PWMIN defines are needed in board_config.h for this board
+#if !defined(RAIN_GPIO_INPUT_CAP) || !defined(RAIN_INPUT_CAP_TIMER) || !defined(RAIN_INPUT_CAP_CHANNEL)
+#error PWMCAP defines are needed in board_config.h for this board
 #endif
 
-/* PWMIN configuration */
-#if   PWMIN_TIMER == 1
-# define PWMIN_TIMER_BASE	STM32_TIM1_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB2ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB2ENR_TIM1EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM1CC
-# define PWMIN_TIMER_CLOCK	STM32_APB2_TIM1_CLKIN
-#elif PWMIN_TIMER == 2
-# define PWMIN_TIMER_BASE	STM32_TIM2_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB1ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB1ENR_TIM2EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM2
-# define PWMIN_TIMER_CLOCK	STM32_APB1_TIM2_CLKIN
-#elif PWMIN_TIMER == 3
-# define PWMIN_TIMER_BASE	STM32_TIM3_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB1ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB1ENR_TIM3EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM3
-# define PWMIN_TIMER_CLOCK	STM32_APB1_TIM3_CLKIN
-#elif PWMIN_TIMER == 4
-# define PWMIN_TIMER_BASE	STM32_TIM4_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB1ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB1ENR_TIM4EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM4
-# define PWMIN_TIMER_CLOCK	STM32_APB1_TIM4_CLKIN
-#elif PWMIN_TIMER == 5
-# define PWMIN_TIMER_BASE	STM32_TIM5_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB1ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB1ENR_TIM5EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM5
-# define PWMIN_TIMER_CLOCK	STM32_APB1_TIM5_CLKIN
-#elif PWMIN_TIMER == 8
-# define PWMIN_TIMER_BASE	STM32_TIM8_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB2ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB2ENR_TIM8EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM8CC
-# define PWMIN_TIMER_CLOCK	STM32_APB2_TIM8_CLKIN
-#elif PWMIN_TIMER == 9
-# define PWMIN_TIMER_BASE	STM32_TIM9_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB2ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB2ENR_TIM9EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM1BRK
-# define PWMIN_TIMER_CLOCK	STM32_APB2_TIM9_CLKIN
-#elif PWMIN_TIMER == 10
-# define PWMIN_TIMER_BASE	STM32_TIM10_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB2ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB2ENR_TIM10EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM1UP
-# define PWMIN_TIMER_CLOCK	STM32_APB2_TIM10_CLKIN
-#elif PWMIN_TIMER == 11
-# define PWMIN_TIMER_BASE	STM32_TIM11_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB2ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB2ENR_TIM11EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM1TRGCOM
-# define PWMIN_TIMER_CLOCK	STM32_APB2_TIM11_CLKIN
-#elif PWMIN_TIMER == 12
-# define PWMIN_TIMER_BASE	STM32_TIM12_BASE
-# define PWMIN_TIMER_POWER_REG	STM32_RCC_APB1ENR
-# define PWMIN_TIMER_POWER_BIT	RCC_APB1ENR_TIM12EN
-# define PWMIN_TIMER_VECTOR	STM32_IRQ_TIM8BRK
-# define PWMIN_TIMER_CLOCK	STM32_APB1_TIM12_CLKIN
+/* PWMCAP configuration */
+#if   RAIN_INPUT_CAP_TIMER == 1
+# define PWMCAP_TIMER_BASE	STM32_TIM1_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB2ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB2ENR_TIM1EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM1CC
+# define PWMCAP_TIMER_CLOCK	STM32_APB2_TIM1_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 2
+# define PWMCAP_TIMER_BASE	STM32_TIM2_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB1ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB1ENR_TIM2EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM2
+# define PWMCAP_TIMER_CLOCK	STM32_APB1_TIM2_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 3
+# define PWMCAP_TIMER_BASE	STM32_TIM3_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB1ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB1ENR_TIM3EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM3
+# define PWMCAP_TIMER_CLOCK	STM32_APB1_TIM3_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 4
+# define PWMCAP_TIMER_BASE	STM32_TIM4_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB1ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB1ENR_TIM4EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM4
+# define PWMCAP_TIMER_CLOCK	STM32_APB1_TIM4_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 5
+# define PWMCAP_TIMER_BASE	STM32_TIM5_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB1ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB1ENR_TIM5EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM5
+# define PWMCAP_TIMER_CLOCK	STM32_APB1_TIM5_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 8
+# define PWMCAP_TIMER_BASE	STM32_TIM8_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB2ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB2ENR_TIM8EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM8CC
+# define PWMCAP_TIMER_CLOCK	STM32_APB2_TIM8_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 9
+# define PWMCAP_TIMER_BASE	STM32_TIM9_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB2ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB2ENR_TIM9EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM1BRK
+# define PWMCAP_TIMER_CLOCK	STM32_APB2_TIM9_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 10
+# define PWMCAP_TIMER_BASE	STM32_TIM10_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB2ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB2ENR_TIM10EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM1UP
+# define PWMCAP_TIMER_CLOCK	STM32_APB2_TIM10_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 11
+# define PWMCAP_TIMER_BASE	STM32_TIM11_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB2ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB2ENR_TIM11EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM1TRGCOM
+# define PWMCAP_TIMER_CLOCK	STM32_APB2_TIM11_CLKIN
+#elif RAIN_INPUT_CAP_TIMER == 12
+# define PWMCAP_TIMER_BASE	STM32_TIM12_BASE
+# define PWMCAP_TIMER_POWER_REG	STM32_RCC_APB1ENR
+# define PWMCAP_TIMER_POWER_BIT	RCC_APB1ENR_TIM12EN
+# define PWMCAP_TIMER_VECTOR	STM32_IRQ_TIM8BRK
+# define PWMCAP_TIMER_CLOCK	STM32_APB1_TIM12_CLKIN
 #else
-# error PWMIN_TIMER must be a value between 1 and 12
+# error RAIN_INPUT_CAP_TIMER must be a value between 1 and 12
 #endif
 
 /*
  * HRT clock must be at least 1MHz
  */
-#if PWMIN_TIMER_CLOCK <= 1000000
-# error PWMIN_TIMER_CLOCK must be greater than 1MHz
+#if PWMCAP_TIMER_CLOCK <= 1000000
+# error PWMCAP_TIMER_CLOCK must be greater than 1MHz
 #endif
 
 /*
  * Timer register accessors
  */
-#define REG(_reg)	(*(volatile uint32_t *)(PWMIN_TIMER_BASE + _reg))
+#define REG(_reg)	(*(volatile uint32_t *)(PWMCAP_TIMER_BASE + _reg))
 
 #define rCR1		REG(STM32_GTIM_CR1_OFFSET)
 #define rCR2		REG(STM32_GTIM_CR2_OFFSET)
@@ -210,44 +231,44 @@
 /*
  * Specific registers and bits used by HRT sub-functions
  */
-#if PWMIN_TIMER_CHANNEL == 1
-#define rCCR_PWMIN_A		rCCR1			/* compare register for PWMIN */
-#define DIER_PWMIN_A		(GTIM_DIER_CC1IE) 	/* interrupt enable for PWMIN */
-#define SR_INT_PWMIN_A		GTIM_SR_CC1IF		/* interrupt status for PWMIN */
-#define rCCR_PWMIN_B		rCCR2 			/* compare register for PWMIN */
-#define SR_INT_PWMIN_B		GTIM_SR_CC2IF		/* interrupt status for PWMIN */
-#define CCMR1_PWMIN		((0x02 << GTIM_CCMR1_CC2S_SHIFT) | (0x01 << GTIM_CCMR1_CC1S_SHIFT))
-#define CCMR2_PWMIN		0
-#define CCER_PWMIN		(GTIM_CCER_CC2P | GTIM_CCER_CC1E | GTIM_CCER_CC2E)
-#define SR_OVF_PWMIN		(GTIM_SR_CC1OF | GTIM_SR_CC2OF)
-#define SMCR_PWMIN_1		(0x05 << GTIM_SMCR_TS_SHIFT)
-#define SMCR_PWMIN_2		((0x04 << GTIM_SMCR_SMS_SHIFT) | SMCR_PWMIN_1)
-#elif PWMIN_TIMER_CHANNEL == 2
-#define rCCR_PWMIN_A		rCCR2			/* compare register for PWMIN */
-#define DIER_PWMIN_A		(GTIM_DIER_CC2IE)	/* interrupt enable for PWMIN */
-#define SR_INT_PWMIN_A		GTIM_SR_CC2IF		/* interrupt status for PWMIN */
-#define rCCR_PWMIN_B		rCCR1			/* compare register for PWMIN */
-#define DIER_PWMIN_B		GTIM_DIER_CC1IE		/* interrupt enable for PWMIN */
-#define SR_INT_PWMIN_B		GTIM_SR_CC1IF		/* interrupt status for PWMIN */
-#define CCMR1_PWMIN		((0x01 << GTIM_CCMR1_CC2S_SHIFT) | (0x02 << GTIM_CCMR1_CC1S_SHIFT))
-#define CCMR2_PWMIN		0
-#define CCER_PWMIN		(GTIM_CCER_CC1P | GTIM_CCER_CC1E | GTIM_CCER_CC2E)
-#define SR_OVF_PWMIN		(GTIM_SR_CC1OF | GTIM_SR_CC2OF)
-#define SMCR_PWMIN_1		(0x06 << GTIM_SMCR_TS_SHIFT)
-#define SMCR_PWMIN_2		((0x04 << GTIM_SMCR_SMS_SHIFT) | SMCR_PWMIN_1)
+#if RAIN_INPUT_CAP_CHANNEL == 1
+#define rCCR_PWMCAP_A		rCCR1			/* compare register for PWMCAP */
+#define DIER_PWMCAP_A		(GTIM_DIER_CC1IE) 	/* interrupt enable for PWMCAP */
+#define SR_INT_PWMCAP_A		GTIM_SR_CC1IF		/* interrupt status for PWMCAP */
+#define rCCR_PWMCAP_B		rCCR2 			/* compare register for PWMCAP */
+#define SR_INT_PWMCAP_B		GTIM_SR_CC2IF		/* interrupt status for PWMCAP */
+#define CCMR1_PWMCAP		((0x02 << GTIM_CCMR1_CC2S_SHIFT) | (0x01 << GTIM_CCMR1_CC1S_SHIFT))
+#define CCMR2_PWMCAP		0
+#define CCER_PWMCAP		(GTIM_CCER_CC2P | GTIM_CCER_CC1E | GTIM_CCER_CC2E)
+#define SR_OVF_PWMCAP		(GTIM_SR_CC1OF | GTIM_SR_CC2OF)
+#define SMCR_PWMCAP_1		(0x05 << GTIM_SMCR_TS_SHIFT)
+#define SMCR_PWMCAP_2		((0x04 << GTIM_SMCR_SMS_SHIFT) | SMCR_PWMCAP_1)
+#elif RAIN_INPUT_CAP_CHANNEL == 2
+#define rCCR_PWMCAP_A		rCCR2			/* compare register for PWMCAP */
+#define DIER_PWMCAP_A		(GTIM_DIER_CC2IE)	/* interrupt enable for PWMCAP */
+#define SR_INT_PWMCAP_A		GTIM_SR_CC2IF		/* interrupt status for PWMCAP */
+#define rCCR_PWMCAP_B		rCCR1			/* compare register for PWMCAP */
+#define DIER_PWMCAP_B		GTIM_DIER_CC1IE		/* interrupt enable for PWMCAP */
+#define SR_INT_PWMCAP_B		GTIM_SR_CC1IF		/* interrupt status for PWMCAP */
+#define CCMR1_PWMCAP		((0x01 << GTIM_CCMR1_CC2S_SHIFT) | (0x02 << GTIM_CCMR1_CC1S_SHIFT))
+#define CCMR2_PWMCAP		0
+#define CCER_PWMCAP		(GTIM_CCER_CC1P | GTIM_CCER_CC1E | GTIM_CCER_CC2E)
+#define SR_OVF_PWMCAP		(GTIM_SR_CC1OF | GTIM_SR_CC2OF)
+#define SMCR_PWMCAP_1		(0x06 << GTIM_SMCR_TS_SHIFT)
+#define SMCR_PWMCAP_2		((0x04 << GTIM_SMCR_SMS_SHIFT) | SMCR_PWMCAP_1)
 #else
-#error PWMIN_TIMER_CHANNEL must be either 1 and 2.
+#error RAIN_INPUT_CAP_CHANNEL must be either 1 and 2.
 #endif
 
 // XXX refactor this out of this driver
 #define TIMEOUT_POLL 300000 /* reset after no response over this time in microseconds [0.3s] */
 #define TIMEOUT_READ 200000 /* don't reset if the last read is back more than this time in microseconds [0.2s] */
 
-class PWMIN : device::CDev
+class PWMCAP : device::CDev
 {
 public:
-	PWMIN();
-	virtual ~PWMIN();
+	PWMCAP();
+	virtual ~PWMCAP();
 
 	virtual int init();
 	virtual int open(struct file *filp);
@@ -279,17 +300,17 @@ private:
 
 };
 
-static int pwmin_tim_isr(int irq, void *context, void *arg);
-static void pwmin_start();
-static void pwmin_info(void);
-static void pwmin_test(void);
-static void pwmin_reset(void);
-static void pwmin_usage(void);
+static int pwmcap_tim_isr(int irq, void *context, void *arg);
+static void pwmcap_start();
+static void pwmcap_info(void);
+static void pwmcap_test(void);
+static void pwmcap_reset(void);
+static void pwmcap_usage(void);
 
-static PWMIN *g_dev;
+static PWMCAP *g_dev;
 
-PWMIN::PWMIN() :
-	CDev("pwmin", PWMIN0_DEVICE_PATH),
+PWMCAP::PWMCAP() :
+	CDev("pwmcap", PWMCAP0_DEVICE_PATH),
 	_error_count(0),
 	_pulses_captured(0),
 	_last_period(0),
@@ -299,7 +320,7 @@ PWMIN::PWMIN() :
 {
 }
 
-PWMIN::~PWMIN()
+PWMCAP::~PWMCAP()
 {
 	if (_reports != nullptr) {
 		delete _reports;
@@ -313,20 +334,20 @@ PWMIN::~PWMIN()
  * pin as PWM output
  */
 int
-PWMIN::init()
+PWMCAP::init()
 {
 	/* we just register the device in /dev, and only actually
 	 * activate the timer when requested to when the device is opened */
 	CDev::init();
 
-	_reports = new ringbuffer::RingBuffer(2, sizeof(struct pwm_input_s));
+	_reports = new ringbuffer::RingBuffer(2, sizeof(struct pwm_capture_s));
 
 	if (_reports == nullptr) {
 		return -ENOMEM;
 	}
 
 	/* Schedule freeze check to invoke periodically */
-	hrt_call_every(&_freeze_test_call, 0, TIMEOUT_POLL, reinterpret_cast<hrt_callout>(&PWMIN::_freeze_test), this);
+	hrt_call_every(&_freeze_test_call, 0, TIMEOUT_POLL, reinterpret_cast<hrt_callout>(&PWMCAP::_freeze_test), this);
 
 	return OK;
 }
@@ -334,7 +355,7 @@ PWMIN::init()
 /*
  * Initialise the timer we are going to use.
  */
-void PWMIN::_timer_init(void)
+void PWMCAP::_timer_init(void)
 {
 	/* run with interrupts disabled in case the timer is already
 	 * setup. We don't want it firing while we are doing the setup */
@@ -348,28 +369,28 @@ void PWMIN::_timer_init(void)
 	px4_arch_configgpio(GPIO_VDD_RANGEFINDER_EN);
 
 	/* claim our interrupt vector */
-	irq_attach(PWMIN_TIMER_VECTOR, pwmin_tim_isr, NULL);
+	irq_attach(PWMCAP_TIMER_VECTOR, pwmcap_tim_isr, NULL);
 
 	/* Clear no bits, set timer enable bit.*/
-	modifyreg32(PWMIN_TIMER_POWER_REG, 0, PWMIN_TIMER_POWER_BIT);
+	modifyreg32(PWMCAP_TIMER_POWER_REG, 0, PWMCAP_TIMER_POWER_BIT);
 
 	/* disable and configure the timer */
 	rCR1 = 0;
 	rCR2 = 0;
 	rSMCR = 0;
-	rDIER = DIER_PWMIN_A;
+	rDIER = DIER_PWMCAP_A;
 	rCCER = 0;		/* unlock CCMR* registers */
-	rCCMR1 = CCMR1_PWMIN;
-	rCCMR2 = CCMR2_PWMIN;
-	rSMCR = SMCR_PWMIN_1;	/* Set up mode */
-	rSMCR = SMCR_PWMIN_2;	/* Enable slave mode controller */
-	rCCER = CCER_PWMIN;
+	rCCMR1 = CCMR1_PWMCAP;
+	rCCMR2 = CCMR2_PWMCAP;
+	rSMCR = SMCR_PWMCAP_1;	/* Set up mode */
+	rSMCR = SMCR_PWMCAP_2;	/* Enable slave mode controller */
+	rCCER = CCER_PWMCAP;
 	rDCR = 0;
 
 	/* for simplicity scale by the clock in MHz. This gives us
 	 * readings in microseconds which is typically what is needed
 	 * for a PWM input driver */
-	uint32_t prescaler = PWMIN_TIMER_CLOCK / 1000000UL;
+	uint32_t prescaler = PWMCAP_TIMER_CLOCK / 1000000UL;
 
 	/*
 	 * define the clock speed. We want the highest possible clock
@@ -388,7 +409,7 @@ void PWMIN::_timer_init(void)
 	rCR1 = GTIM_CR1_CEN;
 
 	/* enable interrupts */
-	up_enable_irq(PWMIN_TIMER_VECTOR);
+	up_enable_irq(PWMCAP_TIMER_VECTOR);
 
 	px4_leave_critical_section(flags);
 
@@ -397,7 +418,7 @@ void PWMIN::_timer_init(void)
 
 // XXX refactor this out of this driver
 void
-PWMIN::_freeze_test()
+PWMCAP::_freeze_test()
 {
 	/* reset if last poll time was way back and a read was recently requested */
 	if (hrt_elapsed_time(&_last_poll_time) > TIMEOUT_POLL && hrt_elapsed_time(&_last_read_time) < TIMEOUT_READ) {
@@ -407,24 +428,24 @@ PWMIN::_freeze_test()
 
 // XXX refactor this out of this driver
 void
-PWMIN::_turn_on()
+PWMCAP::_turn_on()
 {
 	px4_arch_gpiowrite(GPIO_VDD_RANGEFINDER_EN, 1);
 }
 
 // XXX refactor this out of this driver
 void
-PWMIN::_turn_off()
+PWMCAP::_turn_off()
 {
 	px4_arch_gpiowrite(GPIO_VDD_RANGEFINDER_EN, 0);
 }
 
 // XXX refactor this out of this driver
 void
-PWMIN::hard_reset()
+PWMCAP::hard_reset()
 {
 	_turn_off();
-	hrt_call_after(&_hard_reset_call, 9000, reinterpret_cast<hrt_callout>(&PWMIN::_turn_on), this);
+	hrt_call_after(&_hard_reset_call, 9000, reinterpret_cast<hrt_callout>(&PWMCAP::_turn_on), this);
 }
 
 /*
@@ -432,7 +453,7 @@ PWMIN::hard_reset()
  * leave it running
  */
 int
-PWMIN::open(struct file *filp)
+PWMCAP::open(struct file *filp)
 {
 	if (g_dev == nullptr) {
 		return -EIO;
@@ -452,7 +473,7 @@ PWMIN::open(struct file *filp)
  * handle ioctl requests
  */
 int
-PWMIN::ioctl(struct file *filp, int cmd, unsigned long arg)
+PWMCAP::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	switch (cmd) {
 	case SENSORIOCSQUEUEDEPTH: {
@@ -493,12 +514,12 @@ PWMIN::ioctl(struct file *filp, int cmd, unsigned long arg)
  * read some samples from the device
  */
 ssize_t
-PWMIN::read(struct file *filp, char *buffer, size_t buflen)
+PWMCAP::read(struct file *filp, char *buffer, size_t buflen)
 {
 	_last_read_time = hrt_absolute_time();
 
-	unsigned count = buflen / sizeof(struct pwm_input_s);
-	struct pwm_input_s *buf = reinterpret_cast<struct pwm_input_s *>(buffer);
+	unsigned count = buflen / sizeof(struct pwm_capture_s);
+	struct pwm_capture_s *buf = reinterpret_cast<struct pwm_capture_s *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -508,7 +529,7 @@ PWMIN::read(struct file *filp, char *buffer, size_t buflen)
 
 	while (count--) {
 		if (_reports->get(buf)) {
-			ret += sizeof(struct pwm_input_s);
+			ret += sizeof(struct pwm_capture_s);
 			buf++;
 		}
 	}
@@ -520,29 +541,29 @@ PWMIN::read(struct file *filp, char *buffer, size_t buflen)
 /*
  * publish some data from the ISR in the ring buffer
  */
-void PWMIN::publish(uint16_t status, uint32_t period, uint32_t pulse_width)
+void PWMCAP::publish(uint16_t status, uint32_t period, uint32_t pulse_width)
 {
 	/* if we missed an edge, we have to give up */
-	if (status & SR_OVF_PWMIN) {
+	if (status & SR_OVF_PWMCAP) {
 		_error_count++;
 		return;
 	}
 
 	_last_poll_time = hrt_absolute_time();
 
-	struct pwm_input_s pwmin_report;
-	pwmin_report.timestamp = _last_poll_time;
-	pwmin_report.error_count = _error_count;
-	pwmin_report.period = period;
-	pwmin_report.pulse_width = pulse_width;
+	struct pwm_capture_s pwmcap_report;
+	pwmcap_report.timestamp = _last_poll_time;
+	pwmcap_report.error_count = _error_count;
+	pwmcap_report.period = period;
+	pwmcap_report.pulse_width = pulse_width;
 
-	_reports->force(&pwmin_report);
+	_reports->force(&pwmcap_report);
 }
 
 /*
  * print information on the last captured
  */
-void PWMIN::print_info(void)
+void PWMCAP::print_info(void)
 {
 	if (!_timer_started) {
 		printf("timer not started - try the 'test' command\n");
@@ -559,11 +580,11 @@ void PWMIN::print_info(void)
 /*
  * Handle the interrupt, gathering pulse data
  */
-static int pwmin_tim_isr(int irq, void *context, void *arg)
+static int pwmcap_tim_isr(int irq, void *context, void *arg)
 {
 	uint16_t status = rSR;
-	uint32_t period = rCCR_PWMIN_A;
-	uint32_t pulse_width = rCCR_PWMIN_B;
+	uint32_t period = rCCR_PWMCAP_A;
+	uint32_t pulse_width = rCCR_PWMCAP_B;
 
 	/* ack the interrupts we just read */
 	rSR = 0;
@@ -578,13 +599,13 @@ static int pwmin_tim_isr(int irq, void *context, void *arg)
 /*
  * start the driver
  */
-static void pwmin_start()
+static void pwmcap_start()
 {
 	if (g_dev != nullptr) {
 		errx(1, "driver already started");
 	}
 
-	g_dev = new PWMIN();
+	g_dev = new PWMCAP();
 
 	if (g_dev == nullptr) {
 		errx(1, "driver allocation failed");
@@ -600,9 +621,9 @@ static void pwmin_start()
 /*
  * test the driver
  */
-static void pwmin_test(void)
+static void pwmcap_test(void)
 {
-	int fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
+	int fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
 	if (fd == -1) {
 		errx(1, "Failed to open device");
@@ -613,7 +634,7 @@ static void pwmin_test(void)
 	printf("Showing samples for 5 seconds\n");
 
 	while (hrt_absolute_time() < start_time + 5U * 1000UL * 1000UL) {
-		struct pwm_input_s buf;
+		struct pwm_capture_s buf;
 
 		if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
 			printf("period=%u width=%u error_count=%u\n",
@@ -634,10 +655,10 @@ static void pwmin_test(void)
 /*
  * reset the timer
  */
-static void pwmin_reset(void)
+static void pwmcap_reset(void)
 {
 	g_dev->hard_reset();
-	int fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
+	int fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
 	if (fd == -1) {
 		errx(1, "Failed to open device");
@@ -654,7 +675,7 @@ static void pwmin_reset(void)
 /*
  * show some information on the driver
  */
-static void pwmin_info(void)
+static void pwmcap_info(void)
 {
 	if (g_dev == nullptr) {
 		printf("driver not started\n");
@@ -665,7 +686,7 @@ static void pwmin_info(void)
 	exit(0);
 }
 
-static void pwmin_usage()
+static void pwmcap_usage()
 {
 	PX4_ERR("unrecognized command, try 'start', 'info', 'reset' or 'test'");
 }
@@ -673,10 +694,10 @@ static void pwmin_usage()
 /*
  * driver entry point
  */
-int pwm_input_main(int argc, char *argv[])
+int pwm_capture_main(int argc, char *argv[])
 {
 	if (argc < 2) {
-		pwmin_usage();
+		pwmcap_usage();
 		return -1;
 	}
 
@@ -686,31 +707,31 @@ int pwm_input_main(int argc, char *argv[])
 	 * Start/load the driver.
 	 */
 	if (!strcmp(verb, "start")) {
-		pwmin_start();
+		pwmcap_start();
 	}
 
 	/*
 	 * Print driver information.
 	 */
 	if (!strcmp(verb, "info")) {
-		pwmin_info();
+		pwmcap_info();
 	}
 
 	/*
 	 * print test results
 	 */
 	if (!strcmp(verb, "test")) {
-		pwmin_test();
+		pwmcap_test();
 	}
 
 	/*
 	 * reset the timer
 	 */
 	if (!strcmp(verb, "reset")) {
-		pwmin_reset();
+		pwmcap_reset();
 	}
 
-	pwmin_usage();
+	pwmcap_usage();
 	return -1;
 }
 
