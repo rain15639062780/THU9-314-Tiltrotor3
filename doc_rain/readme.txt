@@ -25,3 +25,12 @@
 （2）cmake/congig/nuttx_px4fmu_v5_default.camke  修改/添加pwm_capture.cpp的编译
 测试结果：
 通过系统编译，板载CAP1端口可以正确获取输入脉宽数据信息
+
+3.2018-12-23 测试pwm_capture启动后是否发布pwm_capture消息及是否开始记录数据。
+
+修改文件：src/modules/logger/logger.cpp
+中添加了pwm_capture消息的头文件及add_topic()语句
+
+实验结果：保存的日志数据中并未包含pwm_capture消息。
+推测：pwm_capture_main函数中只是简单启动cap口功能，然后通过printf函数打印在nsh终端,并未对数据进行publish.
+

@@ -63,6 +63,10 @@
 //add adc_report topic
 //#include <uORB/topics/adc_report.h>
 
+//rain 2018-12-23
+//add adc_report topic
+//#include <uORB/topics/pwm_capture.h>
+
 //rain 2018-10-13
 //add euler_mag header
 #include <uORB/topics/vehicle_euler.h>
@@ -693,6 +697,11 @@ void Logger::add_default_topics()
 	//rain 2018-11-16
 	//add adc_report_topic,set sample as the same with power topic
 	//add_topic("adc_report", 100);
+
+
+	//rain 2018-12-23
+	//添加pwm_capture消息的记录
+	//add_topic("pwm_capture");
 
 
 #ifdef CONFIG_ARCH_BOARD_SITL
