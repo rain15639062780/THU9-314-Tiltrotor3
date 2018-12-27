@@ -130,6 +130,18 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	}
 
 	parameters_updated();
+
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	//1.1 变量初始化
+	ang_acc_dq_model.zero();
+	ang_acc_q.zero();
+	ang_acc_q1.zero();
+	ang_acc_q1_prev.zero();
+	ang_acc_q2.zero();
+	ang_acc_q2_prev.zero();
+	ang_acc_dq_estimate.zero();
+	ang_acc_dq_estimate_prev.zero();
+
 }
 
 void
@@ -543,6 +555,92 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		_lp_filters_d[1].apply(rates(1)),
 		_lp_filters_d[2].apply(rates(2)));
 
+
+
+	////////////////////////////////////////////////////////
+		//1.mc_att_control.h中定义入口变量类型 
+
+		
+		//2. 最内环 Subsystem 实现
+		ang_acc_dq_model = (rates_filtered - _rates_prev_filtered) / dt ;//注意验证dt的单位
+		ang_acc_q = rates_filtered;
+
+		ang_acc_q1 = ang_acc_dq_estimate_prev * dt + ang_acc_q1_prev; //积分支路
+
+		ang_acc_q2 = (ang_acc_q - ang_acc_q1) * 15.71*0.2222*dt/0.004 + ang_acc_q2_prev;//低通滤波器支路
+		
+		ang_acc_dq_estimate = ang_acc_dq_model + ang_acc_q2;//dq_estimate支路
+
+
+		//2.1 保存上一周期的计算值	
+		ang_acc_q1_prev = ang_acc_q1;
+		ang_acc_q2_prev = ang_acc_q2;
+		ang_acc_dq_estimate_prev = ang_acc_dq_estimate;
+
+		// 3.次内环 Subsystem2 实现
+		Vector3f ang_acc_dq_estimat;
+		Vector3f ang_acc_d_u;
+		
+		ang_acc_dq_estimat = ang_acc_dq_estimate - ang_acc_dq_model;
+		ang_acc_d_u = ang_acc_dq_estimat / 57.3f;
+
+
+		//4.填充发布数据
+		_v_angular_accel.timestamp = hrt_absolute_time();
+		
+		_v_angular_accel.body_rates[0] = rates(0);
+		_v_angular_accel.body_rates[1] = rates(1);
+		_v_angular_accel.body_rates[2] = rates(2);
+		
+		
+		_v_angular_accel.body_rates_lp[0] = rates_filtered(0);
+		_v_angular_accel.body_rates_lp[1] = rates_filtered(1);
+		_v_angular_accel.body_rates_lp[2] = rates_filtered(2);
+		
+		
+		_v_angular_accel.ang_acc_dq_model[0] = ang_acc_dq_model(0);
+		_v_angular_accel.ang_acc_dq_model[1] = ang_acc_dq_model(1);
+		_v_angular_accel.ang_acc_dq_model[2] = ang_acc_dq_model(2);
+		
+		
+		_v_angular_accel.ang_acc_q[0] = ang_acc_q(0);
+		_v_angular_accel.ang_acc_q[1] = ang_acc_q(1);
+		_v_angular_accel.ang_acc_q[2] = ang_acc_q(2);
+		
+		
+		_v_angular_accel.ang_acc_dq_estimate[0] = ang_acc_dq_estimate(0);
+		_v_angular_accel.ang_acc_dq_estimate[1] = ang_acc_dq_estimate(1);
+		_v_angular_accel.ang_acc_dq_estimate[2] = ang_acc_dq_estimate(2);
+		
+		
+		_v_angular_accel.ang_acc_dq_estimat[0] = ang_acc_dq_estimat(0);
+		_v_angular_accel.ang_acc_dq_estimat[1] = ang_acc_dq_estimat(1);
+		_v_angular_accel.ang_acc_dq_estimat[2] = ang_acc_dq_estimat(2);
+		
+		
+		_v_angular_accel.ang_acc_d_u[0] = ang_acc_d_u(0);
+		_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
+		_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
+		
+
+		//5.发布数据
+		if (_v_angular_accel_pub != nullptr) {
+			orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
+		}else{	
+			_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
+		
+			if (_v_angular_accel_pub == nullptr) {
+				warnx("_v_angular_accel_pub ADVERT FAIL");
+			}	
+		}
+
+
+	////////////////////////////////////////////////////////
+
+
+
+
+
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int -
 		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
@@ -594,6 +692,114 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 
 	}
 }
+
+//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+/*
+ * rain 2018-12-27 
+ * calculate attitude angular acceleration.
+ * Input: '_rates_sp' vector, '_thrust_sp'
+ * Output: '_angular accel' vector
+ */
+void
+MulticopterAttitudeControl::angular_accel_calculate(float dt)
+{
+
+/*
+	//1. MulticopterAttitudeControl构造函数中初始化xxx.h中定义的变量
+	//2. 最内环 Subsystem 实现
+	ang_acc_dq_model = (rates_filtered - _rates_prev_filtered) / dt ;//注意验证dt的单位
+	ang_acc_q = rates_filtered;
+
+	ang_acc_q1 = ang_acc_dq_estimate_prev * dt + ang_acc_q1_prev; //积分支路
+
+	ang_acc_q2 = (ang_acc_q - ang_acc_q1) * 15.71*0.2222*dt/0.004 + ang_acc_q2_prev;//低通滤波器支路
+	
+	ang_acc_dq_estimate = ang_acc_dq_model + ang_acc_q2;//dq_estimate支路
+
+
+	//2.1 保存上一周期的计算值	
+	ang_acc_q1_prev = ang_acc_q1;
+	ang_acc_q2_prev = ang_acc_q2;
+	ang_acc_dq_estimate_prev = ang_acc_dq_estimate;
+
+	// 次内环 Subsystem2 实现
+	Vector3f ang_acc_dq_estimat;
+	Vector3f ang_acc_d_u;
+	
+	ang_acc_dq_estimat = ang_acc_dq_estimate - ang_acc_dq_model;
+	ang_acc_d_u = ang_acc_dq_estimat / 57.3f;
+
+*/
+}
+
+//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+/*
+ * rain 2018-12-27 
+ * calculate attitude angular acceleration.
+ * Input: '_rates_sp' vector, '_thrust_sp'
+ * Output: '_angular accel' vector
+ */
+void
+MulticopterAttitudeControl::angular_accel_publish(float dt)
+{
+
+/*
+	//填充发布数据
+	_v_angular_accel.timestamp = hrt_absolute_time()
+
+	_v_angular_accel.body_rates[0] = rates(0);
+	_v_angular_accel.body_rates[1] = rates(1);
+	_v_angular_accel.body_rates[2] = rates(2);
+
+
+	_v_angular_accel.body_rates_lp[0] = rates_filtered(0);
+	_v_angular_accel.body_rates_lp[1] = rates_filtered(1);
+	_v_angular_accel.body_rates_lp[2] = rates_filtered(2);
+
+
+	_v_angular_accel.ang_acc_dq_model[0] = ang_acc_dq_model(0);
+	_v_angular_accel.ang_acc_dq_model[1] = ang_acc_dq_model(1);
+	_v_angular_accel.ang_acc_dq_model[2] = ang_acc_dq_model(2);
+
+
+	_v_angular_accel.ang_acc_q[0] = ang_acc_q(0);
+	_v_angular_accel.ang_acc_q[1] = ang_acc_q(1);
+	_v_angular_accel.ang_acc_q[2] = ang_acc_q(2);
+
+
+	_v_angular_accel.ang_acc_dq_estimate[0] = ang_acc_dq_estimate(0);
+	_v_angular_accel.ang_acc_dq_estimate[1] = ang_acc_dq_estimate(1);
+	_v_angular_accel.ang_acc_dq_estimate[2] = ang_acc_dq_estimate(2);
+
+
+	_v_angular_accel.ang_acc_dq_estimat[0] = ang_acc_dq_estimat(0);
+	_v_angular_accel.ang_acc_dq_estimat[1] = ang_acc_dq_estimat(1);
+	_v_angular_accel.ang_acc_dq_estimat[2] = ang_acc_dq_estimat(2);
+
+
+	_v_angular_accel.ang_acc_d_u[0] = ang_acc_d_u(0);
+	_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
+	_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
+
+	
+	if (_v_angular_accel_pub != nullptr) {
+		orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
+	}else{	
+		_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
+	
+		if (_v_angular_accel_pub == nullptr) {
+			warnx("_v_angular_accel_pub ADVERT FAIL");
+		}	
+	}
+
+*/
+}
+
+
+
+
+
+
 
 void
 MulticopterAttitudeControl::run()

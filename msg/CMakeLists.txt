@@ -152,6 +152,11 @@ set(msg_files
 
 	#yun 2018-10-16
 	angular_acceleration.msg
+	
+	#rain 2018-12-27
+	#新增关于角加速度数据融合的消息记录
+	mc_att_angular_accel.msg
+
 
 	)
 

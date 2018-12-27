@@ -56,6 +56,9 @@
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_land_detected.h>
+//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+#include <uORB/topics/mc_att_angular_accel.h>
+
 
 /**
  * Multicopter attitude control app start / stop handling function
@@ -125,6 +128,22 @@ private:
 	 */
 	matrix::Vector3f pid_attenuations(float tpa_breakpoint, float tpa_rate);
 
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	/**
+	 * rain 2018-12-27
+	 * calculate angular accel.
+	 */
+	void		angular_accel_calculate(float dt);
+
+	/*
+	 * rain 2018-12-27 
+	 * angular_accel_publish
+	 */
+	void		angular_accel_publish(float dt);
+
+
+
+
 
 	int		_v_att_sub{-1};			/**< vehicle attitude subscription */
 	int		_v_att_sp_sub{-1};		/**< vehicle attitude setpoint subscription */
@@ -147,6 +166,10 @@ private:
 	orb_advert_t	_actuators_0_pub{nullptr};		/**< attitude actuator controls publication */
 	orb_advert_t	_controller_status_pub{nullptr};	/**< controller status publication */
 
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	orb_advert_t	_v_angular_accel_pub{nullptr};		/**< angular_accel publication */
+
+
 	orb_id_t _rates_sp_id{nullptr};		/**< pointer to correct rates setpoint uORB metadata structure */
 	orb_id_t _actuators_id{nullptr};	/**< pointer to correct actuator controls0 uORB metadata structure */
 
@@ -165,6 +188,9 @@ private:
 	struct sensor_bias_s			_sensor_bias {};	/**< sensor in-run bias corrections */
 	struct vehicle_land_detected_s		_vehicle_land_detected {};
 
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	struct mc_att_angular_accel_s	_v_angular_accel {};		/**< vehicle attitude angular_accel */
+
 	MultirotorMixer::saturation_status _saturation_status{};
 
 	perf_counter_t	_loop_perf;			/**< loop performance counter */
@@ -181,6 +207,17 @@ private:
 	matrix::Vector3f _att_control;			/**< attitude control vector */
 
 	matrix::Dcmf _board_rotation;			/**< rotation matrix for the orientation that the board is mounted */
+
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	matrix::Vector3f ang_acc_dq_model;
+	matrix::Vector3f ang_acc_q;
+	matrix::Vector3f ang_acc_q1;
+	matrix::Vector3f ang_acc_q1_prev;
+	matrix::Vector3f ang_acc_q2;
+	matrix::Vector3f ang_acc_q2_prev;
+	matrix::Vector3f ang_acc_dq_estimate;
+	matrix::Vector3f ang_acc_dq_estimate_prev;
+
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MC_ROLL_P>) _roll_p,

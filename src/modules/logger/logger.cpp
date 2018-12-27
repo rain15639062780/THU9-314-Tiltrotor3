@@ -67,6 +67,10 @@
 //add euler_mag header
 #include <uORB/topics/vehicle_euler.h>
 
+//rain 2018-12-27 添加关于角加速度数据融合模块的相关头文件
+#include <uORB/topics/mc_att_angular_accel.h>
+
+
 #include <drivers/drv_hrt.h>
 #include <px4_includes.h>
 #include <px4_getopt.h>
@@ -693,6 +697,10 @@ void Logger::add_default_topics()
 	//rain 2018-11-16
 	//add adc_report_topic,set sample as the same with power topic
 	//add_topic("adc_report", 100);
+
+
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关消息记录
+	add_topic("mc_att_angular_accel");
 
 
 #ifdef CONFIG_ARCH_BOARD_SITL
