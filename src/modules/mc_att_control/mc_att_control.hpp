@@ -209,14 +209,20 @@ private:
 	matrix::Dcmf _board_rotation;			/**< rotation matrix for the orientation that the board is mounted */
 
 	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	matrix::Vector3f body_rates_sp;
+	matrix::Vector3f body_rates;
+	matrix::Vector3f body_rates_lp;
+
 	matrix::Vector3f ang_acc_dq_model;
-	matrix::Vector3f ang_acc_q;
-	matrix::Vector3f ang_acc_q1;
-	matrix::Vector3f ang_acc_q1_prev;
-	matrix::Vector3f ang_acc_q2;
-	matrix::Vector3f ang_acc_q2_prev;
-	matrix::Vector3f ang_acc_dq_estimate;
-	matrix::Vector3f ang_acc_dq_estimate_prev;
+	matrix::Vector3f ang_acc_q_fbk;
+	matrix::Vector3f ang_acc_err_u[2];
+	matrix::Vector3f ang_acc_err_y[2];
+	matrix::Vector3f ang_acc_d_est[2];
+	matrix::Vector3f ang_acc_int[2];
+
+	matrix::Vector3f ang_acc_dq_estemt;
+	matrix::Vector3f ang_acc_d_u;
+
 
 
 	DEFINE_PARAMETERS(

@@ -133,14 +133,28 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 
 	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
 	//1.1 变量初始化
+
+	body_rates_sp.zero();
+	body_rates.zero();
+	body_rates_lp.zero();
+
 	ang_acc_dq_model.zero();
-	ang_acc_q.zero();
-	ang_acc_q1.zero();
-	ang_acc_q1_prev.zero();
-	ang_acc_q2.zero();
-	ang_acc_q2_prev.zero();
-	ang_acc_dq_estimate.zero();
-	ang_acc_dq_estimate_prev.zero();
+	ang_acc_q_fbk.zero();
+
+	ang_acc_err_u[0].zero();
+	ang_acc_err_u[1].zero();
+
+	ang_acc_err_y[0].zero();
+	ang_acc_err_y[1].zero();
+
+	ang_acc_d_est[0].zero();
+	ang_acc_d_est[1].zero();
+
+	ang_acc_int[0].zero();
+	ang_acc_int[1].zero();
+
+	ang_acc_dq_estemt.zero();
+	ang_acc_d_u.zero();
 
 }
 
@@ -558,87 +572,117 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 
 
 	////////////////////////////////////////////////////////
-		//1.mc_att_control.h中定义入口变量类型 
+	//1. 填充模块入口参数
+	//dt的时间单位：s		范围; 0.002~0.02s
+	ang_acc_dq_model = rates_err / dt; //模型入口变量使用当前值还是上一周期的值？	//rad/s^2
+	
+	ang_acc_q_fbk = rates;   //模型入口变量使用当前值还是上一周期的值？  //rad/s
+	
+	 //2. 最内环 Subsystem 实现
+	ang_acc_err_u[1] = ang_acc_q_fbk - ang_acc_int[0];		  //rad/s
+//	ang_acc_err_y[1] = b * ang_acc_err_u[1] + a * ang_acc_err_y[0]; 	 //rad/s^2  //b = (15.71*0.2222*dt/0.004) ; a = (1-0.2222*dt/0.004)
+	ang_acc_err_y[1] = ang_acc_err_u[1] * (15.71*0.2222*(double)dt/0.004)  +  ang_acc_err_y[0] * (1-0.2222*(double)dt/0.004); 	 //rad/s^2  //b = (15.71*0.2222*(double)dt/0.004) ; a = (1-0.2222*(double)dt/0.004)
 
-		
-		//2. 最内环 Subsystem 实现
-		ang_acc_dq_model = (rates_filtered - _rates_prev_filtered) / dt ;//注意验证dt的单位
-		ang_acc_q = rates_filtered;
-
-		ang_acc_q1 = ang_acc_dq_estimate_prev * dt + ang_acc_q1_prev; //积分支路
-
-		ang_acc_q2 = (ang_acc_q - ang_acc_q1) * 15.71*0.2222*dt/0.004 + ang_acc_q2_prev;//低通滤波器支路
-		
-		ang_acc_dq_estimate = ang_acc_dq_model + ang_acc_q2;//dq_estimate支路
-
-
-		//2.1 保存上一周期的计算值	
-		ang_acc_q1_prev = ang_acc_q1;
-		ang_acc_q2_prev = ang_acc_q2;
-		ang_acc_dq_estimate_prev = ang_acc_dq_estimate;
-
-		// 3.次内环 Subsystem2 实现
-		Vector3f ang_acc_dq_estimat;
-		Vector3f ang_acc_d_u;
-		
-		ang_acc_dq_estimat = ang_acc_dq_estimate - ang_acc_dq_model;
-		ang_acc_d_u = ang_acc_dq_estimat / 57.3f;
-
-
-		//4.填充发布数据
-		_v_angular_accel.timestamp = hrt_absolute_time();
-		
-		_v_angular_accel.body_rates[0] = rates(0);
-		_v_angular_accel.body_rates[1] = rates(1);
-		_v_angular_accel.body_rates[2] = rates(2);
-		
-		
-		_v_angular_accel.body_rates_lp[0] = rates_filtered(0);
-		_v_angular_accel.body_rates_lp[1] = rates_filtered(1);
-		_v_angular_accel.body_rates_lp[2] = rates_filtered(2);
-		
-		
-		_v_angular_accel.ang_acc_dq_model[0] = ang_acc_dq_model(0);
-		_v_angular_accel.ang_acc_dq_model[1] = ang_acc_dq_model(1);
-		_v_angular_accel.ang_acc_dq_model[2] = ang_acc_dq_model(2);
-		
-		
-		_v_angular_accel.ang_acc_q[0] = ang_acc_q(0);
-		_v_angular_accel.ang_acc_q[1] = ang_acc_q(1);
-		_v_angular_accel.ang_acc_q[2] = ang_acc_q(2);
-		
-		
-		_v_angular_accel.ang_acc_dq_estimate[0] = ang_acc_dq_estimate(0);
-		_v_angular_accel.ang_acc_dq_estimate[1] = ang_acc_dq_estimate(1);
-		_v_angular_accel.ang_acc_dq_estimate[2] = ang_acc_dq_estimate(2);
-		
-		
-		_v_angular_accel.ang_acc_dq_estimat[0] = ang_acc_dq_estimat(0);
-		_v_angular_accel.ang_acc_dq_estimat[1] = ang_acc_dq_estimat(1);
-		_v_angular_accel.ang_acc_dq_estimat[2] = ang_acc_dq_estimat(2);
-		
-		
-		_v_angular_accel.ang_acc_d_u[0] = ang_acc_d_u(0);
-		_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
-		_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
-		
-
-		//5.发布数据
-		if (_v_angular_accel_pub != nullptr) {
-			orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
-		}else{	
-			_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
-		
-			if (_v_angular_accel_pub == nullptr) {
-				warnx("_v_angular_accel_pub ADVERT FAIL");
-			}	
-		}
-
+			
+	ang_acc_d_est[1] = ang_acc_dq_model * 1.0 + ang_acc_err_y[1];		 //rad/s^2
+	ang_acc_int[1] = (ang_acc_d_est[1] + ang_acc_d_est[0]) * (double)dt/2.0 + ang_acc_int[0];		 //rad/s
+	
+	//3. 次内环 Subsystem2 实现
+	ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model;		  //rad/s^2
+	ang_acc_d_u = ang_acc_dq_estemt * 1.0/57.3;		//rad/s^2
+	
+	//4. 保存上一周期的计算值    
+	ang_acc_err_u[0] = ang_acc_err_u[1];
+	ang_acc_err_y[0] = ang_acc_err_y[1];
+	ang_acc_d_est[0] = ang_acc_d_est[1];
+	ang_acc_int[0] = ang_acc_int[1];
 
 	////////////////////////////////////////////////////////
 
 
+	//5.1 填充发布数据
+	_v_angular_accel.timestamp = hrt_absolute_time();
 
+	_v_angular_accel.body_rates_sp[0] = _rates_sp(0);
+	_v_angular_accel.body_rates_sp[1] = _rates_sp(1);
+	_v_angular_accel.body_rates_sp[2] = _rates_sp(2);
+
+
+	_v_angular_accel.body_rates[0] = rates(0);
+	_v_angular_accel.body_rates[1] = rates(1);
+	_v_angular_accel.body_rates[2] = rates(2);
+
+
+	_v_angular_accel.body_rates_lp[0] = rates_filtered(0);
+	_v_angular_accel.body_rates_lp[1] = rates_filtered(1);
+	_v_angular_accel.body_rates_lp[2] = rates_filtered(2);
+
+
+	_v_angular_accel.ang_acc_dq_model[0] = ang_acc_dq_model(0);
+	_v_angular_accel.ang_acc_dq_model[1] = ang_acc_dq_model(1);
+	_v_angular_accel.ang_acc_dq_model[2] = ang_acc_dq_model(2);
+
+
+	_v_angular_accel.ang_acc_q_fbk[0] = ang_acc_q_fbk(0);
+	_v_angular_accel.ang_acc_q_fbk[1] = ang_acc_q_fbk(1);
+	_v_angular_accel.ang_acc_q_fbk[2] = ang_acc_q_fbk(2);
+
+
+	_v_angular_accel.ang_acc_err_u[0] = ang_acc_err_u[0](0);
+	_v_angular_accel.ang_acc_err_u[1] = ang_acc_err_u[0](1);
+	_v_angular_accel.ang_acc_err_u[2] = ang_acc_err_u[0](2);
+	_v_angular_accel.ang_acc_err_u_prev[0] = ang_acc_err_u[1](0);
+	_v_angular_accel.ang_acc_err_u_prev[1] = ang_acc_err_u[1](1);
+	_v_angular_accel.ang_acc_err_u_prev[2] = ang_acc_err_u[1](2);
+
+
+	_v_angular_accel.ang_acc_err_y[0] = ang_acc_err_y[0](0);
+	_v_angular_accel.ang_acc_err_y[1] = ang_acc_err_y[0](1);
+	_v_angular_accel.ang_acc_err_y[2] = ang_acc_err_y[0](2);
+	_v_angular_accel.ang_acc_err_y_prev[0] = ang_acc_err_y[1](0);
+	_v_angular_accel.ang_acc_err_y_prev[1] = ang_acc_err_y[1](1);
+	_v_angular_accel.ang_acc_err_y_prev[2] = ang_acc_err_y[1](2);
+
+
+	_v_angular_accel.ang_acc_d_est[0] = ang_acc_d_est[0](0);
+	_v_angular_accel.ang_acc_d_est[1] = ang_acc_d_est[0](1);
+	_v_angular_accel.ang_acc_d_est[2] = ang_acc_d_est[0](2);
+	_v_angular_accel.ang_acc_d_est_prev[0] = ang_acc_d_est[1](0);
+	_v_angular_accel.ang_acc_d_est_prev[1] = ang_acc_d_est[1](1);
+	_v_angular_accel.ang_acc_d_est_prev[2] = ang_acc_d_est[1](2);
+
+
+	_v_angular_accel.ang_acc_int[0] = ang_acc_int[0](0);
+	_v_angular_accel.ang_acc_int[1] = ang_acc_int[0](1);
+	_v_angular_accel.ang_acc_int[2] = ang_acc_int[0](2);
+	_v_angular_accel.ang_acc_int_prev[0] = ang_acc_int[1](0);
+	_v_angular_accel.ang_acc_int_prev[1] = ang_acc_int[1](1);
+	_v_angular_accel.ang_acc_int_prev[2] = ang_acc_int[1](2);
+
+
+	_v_angular_accel.ang_acc_dq_estemt[0] = ang_acc_dq_estemt(0);
+	_v_angular_accel.ang_acc_dq_estemt[1] = ang_acc_dq_estemt(1);
+	_v_angular_accel.ang_acc_dq_estemt[2] = ang_acc_dq_estemt(2);
+
+
+	_v_angular_accel.ang_acc_d_u[0] = ang_acc_d_u(0);
+	_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
+	_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
+
+
+	//5.2 发布数据
+	if (_v_angular_accel_pub != nullptr) {
+		orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
+	}else{	
+		_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
+	
+		if (_v_angular_accel_pub == nullptr) {
+			warnx("_v_angular_accel_pub ADVERT FAIL");
+		}	
+	}
+
+
+	////////////////////////////////////////////////////////
 
 
 	_att_control = rates_p_scaled.emult(rates_err) +
