@@ -156,6 +156,12 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	ang_acc_dq_estemt.zero();
 	ang_acc_d_u.zero();
 
+	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
+	
+		_actuator_outputs_sub[i] = -1;
+
+	}
+
 }
 
 void
@@ -669,6 +675,14 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
 	_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
 
+	//填充获取到的电机pwm实际输出值
+	for (unsigned i = 0; i < 16; i++){
+		_v_angular_accel.pwm_outputs[i] =_act_pwm[0].output[i];
+	//	printf("i:%f",(double)_act_pwm[0].output[i]);
+	//	if(i==16) printf("\n");
+	}
+	
+
 
 	//5.2 发布数据
 	if (_v_angular_accel_pub != nullptr) {
@@ -777,6 +791,21 @@ MulticopterAttitudeControl::angular_accel_calculate(float dt)
 }
 
 //rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+void 
+MulticopterAttitudeControl::actuator_outputs_poll()
+{
+	/* check if there is a new message */
+	bool updated;
+	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
+	
+		orb_check(_actuator_outputs_sub[i], &updated);
+	
+		if (updated) {
+			orb_copy(ORB_ID(actuator_outputs), _actuator_outputs_sub[i], &_act_pwm[i]);
+		}
+	}
+}
+//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
 /*
  * rain 2018-12-27 
  * calculate attitude angular acceleration.
@@ -862,6 +891,14 @@ MulticopterAttitudeControl::run()
 	_motor_limits_sub = orb_subscribe(ORB_ID(multirotor_motor_limits));
 	_battery_status_sub = orb_subscribe(ORB_ID(battery_status));
 
+	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	//添加关于pwm输出值
+	// subscribe to topics
+	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
+		_actuator_outputs_sub[i] = orb_subscribe_multi(ORB_ID(actuator_outputs), i);
+	}
+
+
 	_gyro_count = math::min(orb_group_count(ORB_ID(sensor_gyro)), MAX_GYRO_COUNT);
 
 	if (_gyro_count == 0) {
@@ -935,6 +972,9 @@ MulticopterAttitudeControl::run()
 			sensor_correction_poll();
 			sensor_bias_poll();
 			vehicle_land_detected_poll();
+			//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+			//添加关于pwm输出值
+			actuator_outputs_poll();
 
 			/* Check if we are in rattitude mode and the pilot is above the threshold on pitch
 			 * or roll (yaw can rotate 360 in normal att control).  If both are true don't

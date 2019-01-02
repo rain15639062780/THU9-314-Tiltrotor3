@@ -58,6 +58,7 @@
 #include <uORB/topics/vehicle_land_detected.h>
 //rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
 #include <uORB/topics/mc_att_angular_accel.h>
+#include <uORB/topics/actuator_outputs.h>
 
 
 /**
@@ -135,6 +136,8 @@ private:
 	 */
 	void		angular_accel_calculate(float dt);
 
+
+	void		actuator_outputs_poll();
 	/*
 	 * rain 2018-12-27 
 	 * angular_accel_publish
@@ -167,6 +170,7 @@ private:
 	orb_advert_t	_controller_status_pub{nullptr};	/**< controller status publication */
 
 	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	int		_actuator_outputs_sub[2]{ };	
 	orb_advert_t	_v_angular_accel_pub{nullptr};		/**< angular_accel publication */
 
 
@@ -189,6 +193,7 @@ private:
 	struct vehicle_land_detected_s		_vehicle_land_detected {};
 
 	//rain 2018-12-27 添加关于角加速度数据融合模块的相关变量及函数
+	struct actuator_outputs_s		_act_pwm[2] {};	  /*actustor pwmouts*/
 	struct mc_att_angular_accel_s	_v_angular_accel {};		/**< vehicle attitude angular_accel */
 
 	MultirotorMixer::saturation_status _saturation_status{};

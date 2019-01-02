@@ -40,3 +40,8 @@ float32[3] ang_acc_dq_estemt  #roll, pitch, yaw  body axis
 
 #角速率融合模块 模型预测 次内环 角速度补偿
 float32[3] ang_acc_d_u  #roll, pitch, yaw  body axis
+
+#电机pwm实际输出值
+float32[16] pwm_outputs  #actuator_outputs_0 pwm value
+
+
