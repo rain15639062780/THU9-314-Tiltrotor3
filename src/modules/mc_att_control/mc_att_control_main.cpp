@@ -598,23 +598,18 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	//20/1000=0.02
 	//lift_err [-20,20]
 	float lift_roll_err = pwm_roll_err * (float)0.015; //pwm2lift_fun:pwm转换为对应的升力[-20,20]
-	float lift_pitch_err = pwm_roll_err * (float)0.015;
-	float lift_yaw_err = pwm_roll_err * (float)0.015;
+	float lift_pitch_err = pwm_pitch_err * (float)0.015;
+	float lift_yaw_err = pwm_yaw_err * (float)0.015;
 
 	//计算三自由度对应角加速度
 	//平台单侧总重量328g 
 	//(T*L)/(M*L*L) = (1*0.283)/(2*0.35*0.283*0.283) = 10.096 ,1N产生的加速度
 	//ang_acc_dq_model [-200,200]
 	ang_acc_dq_model(0)= lift_roll_err * (float)2.5;//lift2angacc_scale:升力差转换为角加速度的系数
-
 	ang_acc_dq_model(1) = lift_pitch_err * (float)2.5;
-
 	ang_acc_dq_model(2) = lift_yaw_err * (float)2.5;//torsion2angacc_scale;
-
-	//ang_acc_dq_model = rates_err / dt; //模型入口变量使用当前值还是上一周期的值？	//rad/s^2
 	
 	ang_acc_q_fbk[1] = rates;   //模型入口变量使用当前值rates还是上一周期的值_rates_prev？  //rad/s
-	//ang_acc_q_fbk[1] = ang_acc_dq_model*dt + ang_acc_q_fbk[0];
 
 	 //2. 最内环 Subsystem 实现
 	ang_acc_err_u[1] = ang_acc_q_fbk[1] - ang_acc_int[0];		  //rad/s
