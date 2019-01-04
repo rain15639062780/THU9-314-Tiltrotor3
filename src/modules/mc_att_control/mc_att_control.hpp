@@ -219,7 +219,7 @@ private:
 	matrix::Vector3f body_rates_lp;
 
 	matrix::Vector3f ang_acc_dq_model;
-	matrix::Vector3f ang_acc_q_fbk;
+	matrix::Vector3f ang_acc_q_fbk[2];
 	matrix::Vector3f ang_acc_err_u[2];
 	matrix::Vector3f ang_acc_err_y[2];
 	matrix::Vector3f ang_acc_d_est[2];

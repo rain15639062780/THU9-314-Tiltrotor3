@@ -44,4 +44,6 @@ float32[3] ang_acc_d_u  #roll, pitch, yaw  body axis
 #电机pwm实际输出值
 float32[16] pwm_outputs  #actuator_outputs_0 pwm value
 
+#积分有关时间参数
+float32 dt              #now-last_run
 

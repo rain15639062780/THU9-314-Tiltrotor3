@@ -139,7 +139,8 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	body_rates_lp.zero();
 
 	ang_acc_dq_model.zero();
-	ang_acc_q_fbk.zero();
+	ang_acc_q_fbk[0].zero();
+	ang_acc_q_fbk[1].zero();
 
 	ang_acc_err_u[0].zero();
 	ang_acc_err_u[1].zero();
@@ -580,12 +581,43 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	////////////////////////////////////////////////////////
 	//1. 填充模块入口参数
 	//dt的时间单位：s		范围; 0.002~0.02s
-	ang_acc_dq_model = rates_err / dt; //模型入口变量使用当前值还是上一周期的值？	//rad/s^2
+	//dt的时间单位：s 	范围; 0.002~0.02s
+	//实际运行时pwm_max=1950，pwm_min=1050， err:[-900,900]
+	//pwm_error [-1000,1000]
+	float pwm_roll_err  =  _act_pwm[0].output[1]  - _act_pwm[0].output[0] ;
+	float pwm_pitch_err   =  _act_pwm[0].output[2]  - _act_pwm[0].output[3] ;
+	float pwm_yaw_err 	=  ((_act_pwm[0].output[2]  + _act_pwm[0].output[3] ) - (_act_pwm[0].output[1]  + _act_pwm[0].output[2] )) * (float)0.50;//torsion_scale;
+
+	pwm_roll_err = math::constrain(pwm_roll_err, (float)-1000.0, (float)1000.0);
+	pwm_pitch_err = math::constrain(pwm_pitch_err, (float)-1000.0, (float)1000.0);
+	pwm_yaw_err = math::constrain(pwm_yaw_err, (float)-1000.0, (float)1000.0);
+
+
+
+	//u2814kv700电机6s最大推力2180g =21.364N
+	//20/1000=0.02
+	//lift_err [-20,20]
+	float lift_roll_err = pwm_roll_err * (float)0.015; //pwm2lift_fun:pwm转换为对应的升力[-20,20]
+	float lift_pitch_err = pwm_roll_err * (float)0.015;
+	float lift_yaw_err = pwm_roll_err * (float)0.015;
+
+	//计算三自由度对应角加速度
+	//平台单侧总重量328g 
+	//(T*L)/(M*L*L) = (1*0.283)/(2*0.35*0.283*0.283) = 10.096 ,1N产生的加速度
+	//ang_acc_dq_model [-200,200]
+	ang_acc_dq_model(0)= lift_roll_err * (float)2.5;//lift2angacc_scale:升力差转换为角加速度的系数
+
+	ang_acc_dq_model(1) = lift_pitch_err * (float)2.5;
+
+	ang_acc_dq_model(2) = lift_yaw_err * (float)2.5;//torsion2angacc_scale;
+
+	//ang_acc_dq_model = rates_err / dt; //模型入口变量使用当前值还是上一周期的值？	//rad/s^2
 	
-	ang_acc_q_fbk = rates;   //模型入口变量使用当前值还是上一周期的值？  //rad/s
-	
+	ang_acc_q_fbk[1] = rates;   //模型入口变量使用当前值rates还是上一周期的值_rates_prev？  //rad/s
+	//ang_acc_q_fbk[1] = ang_acc_dq_model*dt + ang_acc_q_fbk[0];
+
 	 //2. 最内环 Subsystem 实现
-	ang_acc_err_u[1] = ang_acc_q_fbk - ang_acc_int[0];		  //rad/s
+	ang_acc_err_u[1] = ang_acc_q_fbk[1] - ang_acc_int[0];		  //rad/s
 //	ang_acc_err_y[1] = b * ang_acc_err_u[1] + a * ang_acc_err_y[0]; 	 //rad/s^2  //b = (15.71*0.2222*dt/0.004) ; a = (1-0.2222*dt/0.004)
 	ang_acc_err_y[1] = ang_acc_err_u[1] * (15.71*0.2222*(double)dt/0.004)  +  ang_acc_err_y[0] * (1-0.2222*(double)dt/0.004); 	 //rad/s^2  //b = (15.71*0.2222*(double)dt/0.004) ; a = (1-0.2222*(double)dt/0.004)
 
@@ -598,6 +630,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	ang_acc_d_u = ang_acc_dq_estemt * 1.0/57.3;		//rad/s^2
 	
 	//4. 保存上一周期的计算值    
+	ang_acc_q_fbk[0] = ang_acc_q_fbk[1];
 	ang_acc_err_u[0] = ang_acc_err_u[1];
 	ang_acc_err_y[0] = ang_acc_err_y[1];
 	ang_acc_d_est[0] = ang_acc_d_est[1];
@@ -629,9 +662,9 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_v_angular_accel.ang_acc_dq_model[2] = ang_acc_dq_model(2);
 
 
-	_v_angular_accel.ang_acc_q_fbk[0] = ang_acc_q_fbk(0);
-	_v_angular_accel.ang_acc_q_fbk[1] = ang_acc_q_fbk(1);
-	_v_angular_accel.ang_acc_q_fbk[2] = ang_acc_q_fbk(2);
+	_v_angular_accel.ang_acc_q_fbk[0] = ang_acc_q_fbk[1](0);
+	_v_angular_accel.ang_acc_q_fbk[1] = ang_acc_q_fbk[1](1);
+	_v_angular_accel.ang_acc_q_fbk[2] = ang_acc_q_fbk[1](2);
 
 
 	_v_angular_accel.ang_acc_err_u[0] = ang_acc_err_u[0](0);
@@ -675,6 +708,8 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
 	_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
 
+	//记录时间间隔
+	_v_angular_accel.dt = dt;
 	//填充获取到的电机pwm实际输出值
 	for (unsigned i = 0; i < 16; i++){
 		_v_angular_accel.pwm_outputs[i] =_act_pwm[0].output[i];
