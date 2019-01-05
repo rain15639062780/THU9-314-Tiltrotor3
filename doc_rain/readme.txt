@@ -75,3 +75,15 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 //////////////////////////////////////////////////////////////////////////
 
 
+2019-1-5 rain 关于角加速度观测模块的说明
+
+目前，角加速度模块已经基本能实现roll 和pitch两个自由度的观测，yaw的模型还不确定，
+存在的问题：
+1.时延问题： dq_estimate与q的微分，dq_model在时间上存在延迟，这个原因可能与力距和角加速度的模型有关。
+2.幅值问题： 在理论上，dq_estimate 是q的微分和dq_model二者其中一个的结果，但实验数据中表现为dq_estimate的值均小于q微分和dq_model的值。
+
+
+
+
+
+
