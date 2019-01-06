@@ -228,6 +228,9 @@ private:
 	matrix::Vector3f ang_acc_dq_estemt;
 	matrix::Vector3f ang_acc_d_u;
 
+	//rain 2019-1-6 添加对pwm值延迟的中间变量
+	float pwm_roll_err_delay[20];
+
 
 
 	DEFINE_PARAMETERS(

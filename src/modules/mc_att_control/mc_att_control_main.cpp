@@ -160,8 +160,15 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
 	
 		_actuator_outputs_sub[i] = -1;
+	}
+
+	//rian 2019-1-6 对pwm延迟中间变量初始化
+	for (unsigned i = 0; i < (sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])); i++) {
+	
+		pwm_roll_err_delay[i] = 0.0;
 
 	}
+
 
 }
 
@@ -592,12 +599,30 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	pwm_pitch_err = math::constrain(pwm_pitch_err, (float)-1000.0, (float)1000.0);
 	pwm_yaw_err = math::constrain(pwm_yaw_err, (float)-1000.0, (float)1000.0);
 
+	//rain 2019-1-6 添加pwm相位延迟处理程序
+	static unsigned char num = 0;
+	if(num < sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])){
 
+		pwm_roll_err_delay[num] = pwm_roll_err;
+		num++;
+	}
+	else{
+		
+		pwm_roll_err_delay[19] = pwm_roll_err;
+
+		for (unsigned i = 0; i < ((sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])) - 1); i++) {
+		
+			pwm_roll_err_delay[i] = pwm_roll_err_delay[i+1];
+
+		}
+
+	}
 
 	//u2814kv700电机6s最大推力2180g =21.364N
 	//20/1000=0.02
 	//lift_err [-20,20]
-	float lift_roll_err = pwm_roll_err * (float)0.015; //pwm2lift_fun:pwm转换为对应的升力[-20,20]
+	float lift_roll_err = pwm_roll_err_delay[0] * (float)0.015; //pwm2lift_fun:pwm转换为对应的升力[-20,20]
+	//float lift_roll_err = pwm_roll_err * (float)0.015; //pwm2lift_fun:pwm转换为对应的升力[-20,20]
 	float lift_pitch_err = pwm_pitch_err * (float)0.015;
 	float lift_yaw_err = pwm_yaw_err * (float)0.015;
 
@@ -605,9 +630,9 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	//平台单侧总重量328g 
 	//(T*L)/(M*L*L) = (1*0.283)/(2*0.35*0.283*0.283) = 10.096 ,1N产生的加速度
 	//ang_acc_dq_model [-200,200]
-	ang_acc_dq_model(0)= lift_roll_err * (float)2.5;//lift2angacc_scale:升力差转换为角加速度的系数
-	ang_acc_dq_model(1) = lift_pitch_err * (float)2.5;
-	ang_acc_dq_model(2) = lift_yaw_err * (float)2.5;//torsion2angacc_scale;
+	ang_acc_dq_model(0)= lift_roll_err * (float)1.5;//lift2angacc_scale:升力差转换为角加速度的系数
+	ang_acc_dq_model(1) = lift_pitch_err * (float)1.5;
+	ang_acc_dq_model(2) = lift_yaw_err * (float)1.5;//torsion2angacc_scale;
 	
 	ang_acc_q_fbk[1] = rates;   //模型入口变量使用当前值rates还是上一周期的值_rates_prev？  //rad/s
 
