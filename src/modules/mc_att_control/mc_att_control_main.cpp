@@ -647,7 +647,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	
 	//3. 次内环 Subsystem2 实现
 	ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model;		  //rad/s^2
-	ang_acc_d_u = ang_acc_dq_estemt * 1.0/57.3;		//rad/s^2
+	ang_acc_d_u = ang_acc_dq_estemt * 1.0/1.5;		//rad/s^2
 	
 	//4. 保存上一周期的计算值    
 	ang_acc_q_fbk[0] = ang_acc_q_fbk[1];
@@ -754,10 +754,17 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	////////////////////////////////////////////////////////
 
 
+	//_att_control = rates_p_scaled.emult(rates_err) +
+	//	       _rates_int -
+	//	       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
+	//	       _rate_ff.emult(_rates_sp);
+
+	//rain 2019-1-8 添加至控制律
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int -
-		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
+		       (rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt - ang_acc_d_u)+
 		       _rate_ff.emult(_rates_sp);
+
 
 	_rates_prev = rates;
 	_rates_prev_filtered = rates_filtered;
