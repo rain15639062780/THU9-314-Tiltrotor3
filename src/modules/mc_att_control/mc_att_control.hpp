@@ -219,6 +219,11 @@ private:
 	matrix::Vector3f body_rates_lp;
 
 	matrix::Vector3f ang_acc_dq_model;
+	//rain 2019-1-13 
+	//计算du时，对ang_acc_dq_model多加一个步长延时
+	matrix::Vector3f ang_acc_dq_model_prev;
+
+
 	matrix::Vector3f ang_acc_q_fbk[2];
 	matrix::Vector3f ang_acc_err_u[2];
 	matrix::Vector3f ang_acc_err_y[2];
