@@ -236,8 +236,6 @@ private:
 	//rain 2019-1-6 添加对pwm值延迟的中间变量
 	float pwm_roll_err_delay[20];
 
-	//rain 2019-1-14 对actuator进行分步运算
-	matrix::Vector3f _att_control0;
 
 
 	DEFINE_PARAMETERS(

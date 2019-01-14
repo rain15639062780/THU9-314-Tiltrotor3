@@ -173,9 +173,6 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	}
 
 
-	//rain 2019-1-14 对actuator进行分步运算
-	_att_control0.zero();
-
 }
 
 void
@@ -753,44 +750,6 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	
 
 
-/*	//5.2 发布数据
-	if (_v_angular_accel_pub != nullptr) {
-		orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
-	}else{	
-		_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
-	
-		if (_v_angular_accel_pub == nullptr) {
-			warnx("_v_angular_accel_pub ADVERT FAIL");
-		}	
-	}
-*/
-
-	////////////////////////////////////////////////////////
-
-
-	//_att_control = rates_p_scaled.emult(rates_err) +
-	//	       _rates_int -
-	//	       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
-	//	       _rate_ff.emult(_rates_sp);
-
-	//rain 2019-1-8 添加至控制律
-//	_att_control = rates_p_scaled.emult(rates_err) +
-//		       _rates_int -
-//		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt - ang_acc_d_u+
-//		       _rate_ff.emult(_rates_sp);
-
-	//rain 2019-1-8 添加至控制律
-	//_att_control0 在.h中定义
-	_att_control0 = rates_p_scaled.emult(rates_err) +
-		       _rates_int -
-		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
-		       _rate_ff.emult(_rates_sp);
-
-	_att_control = _att_control0 - ang_acc_d_u;
-
-	//填充actuator_roll数据
-	_v_angular_accel.att_control_roll = _att_control0(0);
-
 	//5.2 发布数据
 	if (_v_angular_accel_pub != nullptr) {
 		orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
@@ -802,6 +761,20 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		}	
 	}
 
+
+	////////////////////////////////////////////////////////
+
+
+	//_att_control = rates_p_scaled.emult(rates_err) +
+	//	       _rates_int -
+	//	       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
+	//	       _rate_ff.emult(_rates_sp);
+
+	//rain 2019-1-8 添加至控制律
+	_att_control = rates_p_scaled.emult(rates_err) +
+		       _rates_int -
+		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt - ang_acc_d_u+
+		       _rate_ff.emult(_rates_sp);
 
 
 	_rates_prev = rates;

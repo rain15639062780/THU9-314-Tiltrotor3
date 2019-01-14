@@ -47,13 +47,3 @@ float32[16] pwm_outputs  #actuator_outputs_0 pwm value
 #积分有关时间参数
 float32 dt              #now-last_run
 
-#采样pwm及延迟后的pwm记录
-float32 pwm_roll_err
-float32 pwm_roll_err_delay
-
-#对actuator分步运算
-float32 att_control_roll
-
-
-
-

@@ -173,9 +173,6 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	}
 
 
-	//rain 2019-1-14 对actuator进行分步运算
-	_att_control0.zero();
-
 }
 
 void
@@ -606,16 +603,23 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	pwm_yaw_err = math::constrain(pwm_yaw_err, (float)-1000.0, (float)1000.0);
 
 	//rain 2019-1-6 添加pwm相位延迟处理程序
-	
-	pwm_roll_err_delay[19] = pwm_roll_err;
+	static unsigned char num = 0;
+	if(num < sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])){
 
-	//for (unsigned i = 0; i < ((sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])) - 1); i++) {
-	for (unsigned i = 0; i < 19; i++) {
-	
-		pwm_roll_err_delay[i] = pwm_roll_err_delay[i+1];
+		pwm_roll_err_delay[num] = pwm_roll_err;
+		num++;
+	}
+	else{
+		
+		pwm_roll_err_delay[19] = pwm_roll_err;
+
+		for (unsigned i = 0; i < ((sizeof(pwm_roll_err_delay) / sizeof(pwm_roll_err_delay[0])) - 1); i++) {
+		
+			pwm_roll_err_delay[i] = pwm_roll_err_delay[i+1];
+
+		}
 
 	}
-
 
 	//u2814kv700电机6s最大推力2180g =21.364N
 	//20/1000=0.02
@@ -637,7 +641,10 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 
 	 //2. 最内环 Subsystem 实现
 	ang_acc_err_u[1] = ang_acc_q_fbk[1] - ang_acc_int[0];		  //rad/s
+//	ang_acc_err_y[1] = b * ang_acc_err_u[1] + a * ang_acc_err_y[0]; 	 //rad/s^2  //b = (15.71*0.2222*dt/0.004) ; a = (1-0.2222*dt/0.004)
 	ang_acc_err_y[1] = ang_acc_err_u[1] * (15.71*0.2222*(double)dt/0.004)  +  ang_acc_err_y[0] * (1-0.2222*(double)dt/0.004); 	 //rad/s^2  //b = (15.71*0.2222*(double)dt/0.004) ; a = (1-0.2222*(double)dt/0.004)
+
+			
 	ang_acc_d_est[1] = ang_acc_dq_model * 1.0 + ang_acc_err_y[1];		 //rad/s^2
 	ang_acc_int[1] = (ang_acc_d_est[1] + ang_acc_d_est[0]) * (double)dt/2.0 + ang_acc_int[0];		 //rad/s
 	
@@ -733,15 +740,6 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_v_angular_accel.ang_acc_d_u[1] = ang_acc_d_u(1);
 	_v_angular_accel.ang_acc_d_u[2] = ang_acc_d_u(2);
 
-
-	//rain 2019-1-14
-	//调试bug时添加中间变量保存
-
-	_v_angular_accel.pwm_roll_err = pwm_roll_err;
-	_v_angular_accel.pwm_roll_err_delay = pwm_roll_err_delay[0];
-
-	
-
 	//记录时间间隔
 	_v_angular_accel.dt = dt;
 	//填充获取到的电机pwm实际输出值
@@ -752,44 +750,6 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	}
 	
 
-
-/*	//5.2 发布数据
-	if (_v_angular_accel_pub != nullptr) {
-		orb_publish(ORB_ID(mc_att_angular_accel), _v_angular_accel_pub, &_v_angular_accel);
-	}else{	
-		_v_angular_accel_pub = orb_advertise(ORB_ID(mc_att_angular_accel), &_v_angular_accel);
-	
-		if (_v_angular_accel_pub == nullptr) {
-			warnx("_v_angular_accel_pub ADVERT FAIL");
-		}	
-	}
-*/
-
-	////////////////////////////////////////////////////////
-
-
-	//_att_control = rates_p_scaled.emult(rates_err) +
-	//	       _rates_int -
-	//	       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
-	//	       _rate_ff.emult(_rates_sp);
-
-	//rain 2019-1-8 添加至控制律
-//	_att_control = rates_p_scaled.emult(rates_err) +
-//		       _rates_int -
-//		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt - ang_acc_d_u+
-//		       _rate_ff.emult(_rates_sp);
-
-	//rain 2019-1-8 添加至控制律
-	//_att_control0 在.h中定义
-	_att_control0 = rates_p_scaled.emult(rates_err) +
-		       _rates_int -
-		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
-		       _rate_ff.emult(_rates_sp);
-
-	_att_control = _att_control0 - ang_acc_d_u;
-
-	//填充actuator_roll数据
-	_v_angular_accel.att_control_roll = _att_control0(0);
 
 	//5.2 发布数据
 	if (_v_angular_accel_pub != nullptr) {
@@ -802,6 +762,20 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		}	
 	}
 
+
+	////////////////////////////////////////////////////////
+
+
+	//_att_control = rates_p_scaled.emult(rates_err) +
+	//	       _rates_int -
+	//	       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
+	//	       _rate_ff.emult(_rates_sp);
+
+	//rain 2019-1-8 添加至控制律
+	_att_control = rates_p_scaled.emult(rates_err) +
+		       _rates_int -
+		       (rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt - ang_acc_d_u)+
+		       _rate_ff.emult(_rates_sp);
 
 
 	_rates_prev = rates;
@@ -1286,4 +1260,3 @@ int mc_att_control_main(int argc, char *argv[])
 {
 	return MulticopterAttitudeControl::main(argc, argv);
 }
-

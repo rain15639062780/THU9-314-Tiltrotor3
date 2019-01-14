@@ -51,8 +51,7 @@ float32 dt              #now-last_run
 float32 pwm_roll_err
 float32 pwm_roll_err_delay
 
-#对actuator分步运算
-float32 att_control_roll
+
 
 
 
