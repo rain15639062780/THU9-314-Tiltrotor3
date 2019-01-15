@@ -642,13 +642,13 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	ang_acc_int[1] = (ang_acc_d_est[1] + ang_acc_d_est[0]) * (double)dt/2.0 + ang_acc_int[0];		 //rad/s
 	
 	//3. 次内环 Subsystem2 实现
-	//ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model;		  //rad/s^2
-	//ang_acc_d_u = ang_acc_dq_estemt * 1.0/1.5;		//rad/s^2
+	ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model;		  //rad/s^2
+	ang_acc_d_u = ang_acc_dq_estemt * 1.0/1.5/15;		//rad/s^2
 
 	//rain 2019-1-13
 	//计算du时，对ang_acc_dq_model多加一个步长延时
-	ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model_prev;		  //rad/s^2
-	ang_acc_d_u = ang_acc_dq_estemt * 1.0/1.5;		//rad/s^2
+	//ang_acc_dq_estemt = ang_acc_d_est[1] - ang_acc_dq_model_prev;		  //rad/s^2
+	//ang_acc_d_u = ang_acc_dq_estemt * 1.0/1.5/15.0;		//rad/s^2
 	
 	//4. 保存上一周期的计算值    
 	ang_acc_q_fbk[0] = ang_acc_q_fbk[1];
