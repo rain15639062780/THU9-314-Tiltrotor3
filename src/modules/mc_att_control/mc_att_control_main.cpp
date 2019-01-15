@@ -786,7 +786,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		       rates_d_scaled.emult(rates_filtered - _rates_prev_filtered) / dt +
 		       _rate_ff.emult(_rates_sp);
 
-	_att_control = _att_control0 - ang_acc_d_u;
+	_att_control = _att_control0 - ang_acc_d_u * 0.5;
 
 	//填充actuator_roll数据
 	_v_angular_accel.att_control_roll = _att_control0(0);
