@@ -273,12 +273,10 @@ public:
 	virtual int init();
 	virtual int open(struct file *filp);
 	virtual ssize_t read(struct file *filp, char *buffer, size_t buflen);
-	virtual int ioctl(struct file *filp, int cmd, unsigned long arg);
+
 
 	void publish(uint16_t status, uint32_t period, uint32_t pulse_width);
-	void print_info(void);
-	void hard_reset();
-	void work(void);
+
 
 private:
 	uint32_t _error_count;
@@ -292,29 +290,15 @@ private:
 
 	hrt_call _hard_reset_call;	/* HRT callout for note completion */
 	hrt_call _freeze_test_call;	/* HRT callout for note completion */
-	//rain 2019-1-9
-	//添加关于消息发布的程序
-	hrt_call _pwm_capture_call;	/* HRT callout for note completion */
-
-	//rain 2018-1-9
-	//添加消息 publish 程序
-	orb_advert_t	_pwm_capture_pub{nullptr};		/**< rate setpoint publication */
-	struct pwm_capture_s 		_pwm_capture {}; /**< vehicle status */
-
 
 	void _timer_init(void);
 
-	void _turn_on();
-	void _turn_off();
-	void _freeze_test();
 
 };
 
 static int pwmcap_tim_isr(int irq, void *context, void *arg);
 static void pwmcap_start();
-static void pwmcap_info(void);
 static void pwmcap_test(void);
-static void pwmcap_reset(void);
 static void pwmcap_usage(void);
 
 static PWMCAP *g_dev;
@@ -326,8 +310,7 @@ PWMCAP::PWMCAP() :
 	_last_period(0),
 	_last_width(0),
 	_reports(nullptr),
-	_timer_started(false),
-	_pwm_capture_pub(nullptr)
+	_timer_started(false)
 {
 }
 
@@ -359,20 +342,6 @@ PWMCAP::init()
 
 	/* Schedule freeze check to invoke periodically */
 	//hrt_call_every(&_freeze_test_call, 0, TIMEOUT_POLL, reinterpret_cast<hrt_callout>(&PWMCAP::_freeze_test), this);
-	
-
-
-	int fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
-
-	if (fd == -1) {
-		errx(1, "Failed to open device");
-	}
-
-	hrt_call_every(&_pwm_capture_call, 0, TIMEOUT_POLL, reinterpret_cast<hrt_callout>(&PWMCAP::work), this);
-
-
-
-
 
 	return OK;
 }
@@ -441,37 +410,6 @@ void PWMCAP::_timer_init(void)
 	_timer_started = true;
 }
 
-// XXX refactor this out of this driver
-void
-PWMCAP::_freeze_test()
-{
-	/* reset if last poll time was way back and a read was recently requested */
-	if (hrt_elapsed_time(&_last_poll_time) > TIMEOUT_POLL && hrt_elapsed_time(&_last_read_time) < TIMEOUT_READ) {
-		hard_reset();
-	}
-}
-
-// XXX refactor this out of this driver
-void
-PWMCAP::_turn_on()
-{
-	px4_arch_gpiowrite(GPIO_VDD_RANGEFINDER_EN, 1);
-}
-
-// XXX refactor this out of this driver
-void
-PWMCAP::_turn_off()
-{
-	px4_arch_gpiowrite(GPIO_VDD_RANGEFINDER_EN, 0);
-}
-
-// XXX refactor this out of this driver
-void
-PWMCAP::hard_reset()
-{
-	_turn_off();
-	hrt_call_after(&_hard_reset_call, 9000, reinterpret_cast<hrt_callout>(&PWMCAP::_turn_on), this);
-}
 
 /*
  * hook for open of the driver. We start the timer at this point, then
@@ -493,46 +431,6 @@ PWMCAP::open(struct file *filp)
 	return ret;
 }
 
-
-/*
- * handle ioctl requests
- */
-int
-PWMCAP::ioctl(struct file *filp, int cmd, unsigned long arg)
-{
-	switch (cmd) {
-	case SENSORIOCSQUEUEDEPTH: {
-			/* lower bound is mandatory, upper bound is a sanity check */
-			if ((arg < 1) || (arg > 500)) {
-				return -EINVAL;
-			}
-
-			irqstate_t flags = px4_enter_critical_section();
-
-			if (!_reports->resize(arg)) {
-				px4_leave_critical_section(flags);
-				return -ENOMEM;
-			}
-
-			px4_leave_critical_section(flags);
-
-			return OK;
-		}
-
-	case SENSORIOCRESET:
-		/* user has asked for the timer to be reset. This may
-		 * be needed if the pin was used for a different
-		 * purpose (such as PWM output) */
-		_timer_init();
-		/* also reset the sensor */
-		hard_reset();
-		return OK;
-
-	default:
-		/* give it to the superclass */
-		return CDev::ioctl(filp, cmd, arg);
-	}
-}
 
 
 /*
@@ -584,45 +482,6 @@ void PWMCAP::publish(uint16_t status, uint32_t period, uint32_t pulse_width)
 
 	_reports->force(&pwmcap_report);
 }
-
-/*
- * print information on the last captured
- */
-void PWMCAP::print_info(void)
-{
-	if (!_timer_started) {
-		printf("timer not started - try the 'test' command\n");
-
-	} else {
-		printf("count=%u period=%u width=%u\n",
-		       (unsigned)_pulses_captured,
-		       (unsigned)_last_period,
-		       (unsigned)_last_width);
-	}
-}
-
-//rain 2018-1-9
-//添加消息 publish 程序
-
-/*
- * print information on the last captured
- */
-
-void PWMCAP::work(void)
-{
-
-		struct pwm_capture_s buf;
-
-		if (PWMCAP::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
-			   _pwm_capture.timestamp =  hrt_absolute_time();
-			   _pwm_capture.error_count = .error_count;
-			   _pwm_capture.pulse_width = buf.pulse_width;
-			   _pwm_capture.period = buf.period;
-				   			   
-		} 
-
-}
-
 
 
 /*
@@ -700,39 +559,8 @@ static void pwmcap_test(void)
 	exit(0);
 }
 
-/*
- * reset the timer
- */
-static void pwmcap_reset(void)
-{
-	g_dev->hard_reset();
-	int fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
-	if (fd == -1) {
-		errx(1, "Failed to open device");
-	}
 
-	if (ioctl(fd, SENSORIOCRESET, 0) != OK) {
-		errx(1, "reset failed");
-	}
-
-	close(fd);
-	exit(0);
-}
-
-/*
- * show some information on the driver
- */
-static void pwmcap_info(void)
-{
-	if (g_dev == nullptr) {
-		printf("driver not started\n");
-		exit(1);
-	}
-
-	g_dev->print_info();
-	exit(0);
-}
 
 static void pwmcap_usage()
 {
@@ -758,12 +586,6 @@ int pwm_capture_main(int argc, char *argv[])
 		pwmcap_start();
 	}
 
-	/*
-	 * Print driver information.
-	 */
-	if (!strcmp(verb, "info")) {
-		pwmcap_info();
-	}
 
 	/*
 	 * print test results
@@ -772,16 +594,8 @@ int pwm_capture_main(int argc, char *argv[])
 		pwmcap_test();
 	}
 
-	/*
-	 * reset the timer
-	 */
-	if (!strcmp(verb, "reset")) {
-		pwmcap_reset();
-	}
 
 	pwmcap_usage();
 	return -1;
 }
-
-
 

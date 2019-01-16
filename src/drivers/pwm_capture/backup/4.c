@@ -125,7 +125,7 @@ private:
 
 	bool		_task_should_exit ;		/**< if true, task should exit */
 	int		_control_task ;			/**< task handle for task */
-
+	//int     fd_pwmcap;
 
 
 	void _timer_init(void);
@@ -138,11 +138,10 @@ static int pwmcap_tim_isr(int irq, void *context, void *arg);
 static void pwmcap_start();
 static void pwmcap_test(void);
 static void pwmcap_usage(void);
-static void pwmcap_measure(bool should_exit);
 
 
 static PWMCAP *g_dev;
-
+static int fd_pwmcap = -1;
 
 PWMCAP::PWMCAP() :
 	CDev("pwmcap", PWMCAP0_DEVICE_PATH),
@@ -151,6 +150,7 @@ PWMCAP::PWMCAP() :
 	_timer_started(false),
 	_task_should_exit(false),
 	_control_task(-1)
+	//fd_pwmcap(-1)
 {
 }
 
@@ -159,7 +159,6 @@ PWMCAP::~PWMCAP()
 	if (_reports != nullptr) {
 		delete _reports;
 	}
-
 
 	if (_control_task != -1) {
 		/* task wakes up every 100ms or so at the longest */
@@ -383,13 +382,17 @@ static void pwmcap_start()
 	}
 
 	if (g_dev->init() != OK) {
-		
-		delete  g_dev;
-		g_dev = nullptr;		
 		errx(1, "driver init failed");
-
 	}
-	
+
+
+	fd_pwmcap = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
+
+	if (fd_pwmcap == -1) {
+		errx(1, "Failed to open device");
+	}
+
+
 
 	if (g_dev->task_main_create() != OK) {
 		errx(1, "task create failed");
@@ -430,17 +433,33 @@ int PWMCAP::task_main_trampoline(int argc, char *argv[])
 void PWMCAP::task_main()
 {
 	
+	//fd_pwmcap = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
+//	if (fd_pwmcap == -1) {
+//		errx(1, "Failed to open device");
+//	}
 	
 	//int i = 0;
 	while (!_task_should_exit) {
+		struct pwm_capture_s buf;
 
-		pwmcap_measure(_task_should_exit);
+		if (::read(fd_pwmcap, &buf, sizeof(buf)) == sizeof(buf)) {
+				printf("period=%u width=%u error_count=%u\n",
+					   (unsigned)buf.period,
+					   (unsigned)buf.pulse_width,
+					   (unsigned)buf.error_count);
 
-		usleep(1000);
+			} else {
+				// no data, retry in 2 ms 
+				usleep(2000);
+			}
+
+			//printf("PWMCAP::task_main = %d\n",i++);
+			//usleep(1000);
 		}
 		
-
+		
+	close(fd_pwmcap);
 	exit(0);
 
 }
@@ -481,41 +500,6 @@ static void pwmcap_test(void)
 }
 
 
-static void pwmcap_measure(bool should_exit)
-{
-	static int fd = -1;
-
-		 fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
-
-		if (fd == -1) {
-			errx(1, "Failed to open device");
-		}
-
-
-
-	//uint64_t start_time = hrt_absolute_time();
-
-	struct pwm_capture_s buf;
-
-	//if (!should_exit) {
-
-		if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
-			printf("period=%u width=%u error_count=%u\n",
-			       (unsigned)buf.period,
-			       (unsigned)buf.pulse_width,
-			       (unsigned)buf.error_count);
-
-		} else {
-			/* no data, retry in 2 ms */
-			//::usleep(2000);
-			printf("pwmcap_measure error\n");
-		}
-	//}
-		close(fd);
-
-}
-
-
 
 
 static void pwmcap_usage()
@@ -540,18 +524,6 @@ int pwm_capture_main(int argc, char *argv[])
 	 */
 	if (!strcmp(verb, "start")) {
 		pwmcap_start();
-	}
-	
-	if (!strcmp(argv[1], "stop")) {
-		if (g_dev == nullptr) {
-			warnx("not running");
-			return 1;
-		}
-
-		
-		delete g_dev;
-		g_dev = nullptr;
-		return 0;
 	}
 
 

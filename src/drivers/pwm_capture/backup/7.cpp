@@ -435,9 +435,10 @@ void PWMCAP::task_main()
 	//int i = 0;
 	while (!_task_should_exit) {
 
-		pwmcap_measure(_task_should_exit);
-
-		usleep(1000);
+			pwmcap_measure(_task_should_exit);
+	
+	
+			usleep(50000);
 		}
 		
 
@@ -484,20 +485,26 @@ static void pwmcap_test(void)
 static void pwmcap_measure(bool should_exit)
 {
 	static int fd = -1;
+	static bool open_flag = !should_exit;
 
+	if(open_flag){
 		 fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
 		if (fd == -1) {
 			errx(1, "Failed to open device");
 		}
-
+		open_flag = !open_flag;
+		printf("open fd\n");
+	}
 
 
 	//uint64_t start_time = hrt_absolute_time();
 
+	//printf("Showing samples for 5 seconds\n");
 	struct pwm_capture_s buf;
 
-	//if (!should_exit) {
+	if (!should_exit) {
+		
 
 		if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
 			printf("period=%u width=%u error_count=%u\n",
@@ -510,9 +517,14 @@ static void pwmcap_measure(bool should_exit)
 			//::usleep(2000);
 			printf("pwmcap_measure error\n");
 		}
-	//}
-		close(fd);
+	}
 
+	if(should_exit){
+
+		close(fd);
+		exit(0);
+		printf("close fd\n");
+	}
 }
 
 
