@@ -100,18 +100,12 @@ private:
 	bool adc_capture_poll();
 
 	int 	_actuator_control_0_sub = -1;
-
-	
-//	int 	_actuator_outputs_0_sub = -1;
-	int 	_actuator_outputs_sub[2]{ };	
-
-
-	
+	int 	_actuator_outputs_0_sub = -1;
 	int 	_pwm_capture_sub = -1;
 	int 	_adc_capture_sub = -1;
 
 	struct actuator_controls_s		_actuator_controls {};		/**< actuator controls */
-	struct actuator_outputs_s		_actuator_outputs[2] {};	  /*actustor pwmouts*/
+	struct actuator_outputs_s			_actuator_outputs {};	/**< vehicle status */
 	struct pwm_capture_s			_pwm_capture {};	/**< battery status */
 	struct adc_report_s			_adc_capture {};	//< gyro data before thermal correctons and
 
@@ -124,13 +118,6 @@ private:
 
 PROPELLER::PROPELLER()
 {
-
-	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
-	
-		_actuator_outputs_sub[i] = -1;
-	}
-
-
 	
 }
 
@@ -179,13 +166,10 @@ PROPELLER::actuator_outputs_poll()
 {
 	/* check if there is a new message */
 	bool updated;
-	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
-	
-		orb_check(_actuator_outputs_sub[i], &updated);
-	
-		if (updated) {
-			orb_copy(ORB_ID(actuator_outputs), _actuator_outputs_sub[i], &_actuator_outputs[i]);
-		}
+	orb_check(_actuator_outputs_0_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(actuator_outputs), _actuator_outputs_0_sub, &_actuator_outputs);
 	}
 
 	return updated;
@@ -273,18 +257,12 @@ void PROPELLER::task_main()
 {
 
 	_actuator_control_0_sub = orb_subscribe(ORB_ID(actuator_controls_0));
-//	_actuator_outputs_0_sub = orb_subscribe(ORB_ID(actuator_outputs));
-
+	_actuator_outputs_0_sub = orb_subscribe(ORB_ID(actuator_outputs));
 	_pwm_capture_sub = orb_subscribe(ORB_ID(pwm_capture));
 	_adc_capture_sub = orb_subscribe(ORB_ID(adc_report));
 
-	for (unsigned i = 0; i < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); i++) {
-		_actuator_outputs_sub[i] = orb_subscribe_multi(ORB_ID(actuator_outputs), i);
-	}
 
-
-
-	unsigned int i = 0;
+	int i = 0;
 	while (!_task_should_exit) {
 
 		bool control_update =  actuator_controls_poll();
@@ -300,26 +278,17 @@ void PROPELLER::task_main()
 
 
 		if(control_update){
-			for( i = 0; i<8; i++){
-			printf("control[%d]= %f\n",i,(double)_actuator_controls.control[i]*1000);
-			
-			}
-
+		//	printf("actuator_controls.control[2] = %u\n",(double)_actuator_controls.control[2]);
 			printf("control_update\n");
 		}
 		
 		if(outputs_update){
-		//	for( i = 0; i<8; i++){
-		//	printf("output[%d]= %f\n",i,(double)_actuator_outputs[1].output[i]);
-
-		//	}
-		//	printf("padding= %f\n",_actuator_outputs[1]._padding0[0]);
-		
+		//	printf("_actuator_outputs.output[0]= %u\n",(double)_actuator_outputs.output[0]);
 			printf("outputs_update\n");
 		}
 		
 		if(pwm_update){
-		//	printf("pwm_capture.period = %u\n",(unsigned)_pwm_capture.period);
+			printf("pwm_capture.period = %u\n",(unsigned)_pwm_capture.period);
 			printf("pwm_update\n");
 		}
 		
@@ -336,14 +305,9 @@ void PROPELLER::task_main()
 
 
 	orb_unsubscribe(_actuator_control_0_sub);
-	//orb_unsubscribe(_actuator_outputs_0_sub);
+	orb_unsubscribe(_actuator_outputs_0_sub);
 	orb_unsubscribe(_pwm_capture_sub);
 	orb_unsubscribe(_adc_capture_sub);
-
-	for (unsigned j = 0; j < (sizeof(_actuator_outputs_sub) / sizeof(_actuator_outputs_sub[0])); j++) {
-		
-		orb_unsubscribe(_actuator_outputs_sub[j]);
-	}
 
 	
 }

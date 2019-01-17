@@ -61,7 +61,7 @@
 #include <uORB/topics/sensor_gyro_mpu6000.h>
 //rain 2018-11-14
 //add adc_report topic
-//#include <uORB/topics/adc_report.h>
+#include <uORB/topics/adc_report.h>
 
 //rain 2018-12-23
 //add pwm_report topic
@@ -696,7 +696,7 @@ void Logger::add_default_topics()
 
 	//rain 2018-11-16
 	//add adc_report_topic,set sample as the same with power topic
-	//add_topic("adc_report", 100);
+	add_topic("adc_report");
 
 
 	//rain 2018-12-23

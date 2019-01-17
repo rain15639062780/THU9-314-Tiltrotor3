@@ -300,20 +300,16 @@ void PROPELLER::task_main()
 
 
 		if(control_update){
-			for( i = 0; i<8; i++){
-			printf("control[%d]= %f\n",i,(double)_actuator_controls.control[i]*1000);
-			
-			}
-
+		//	printf("actuator_controls.control[2] = %u\n",(double)_actuator_controls.control[2]);
 			printf("control_update\n");
 		}
 		
 		if(outputs_update){
-		//	for( i = 0; i<8; i++){
-		//	printf("output[%d]= %f\n",i,(double)_actuator_outputs[1].output[i]);
+			for( i = 0; i<8; i++){
+			printf("output[%d]= %f\n",i,(double)_actuator_outputs[0].output[i]);
 
-		//	}
-		//	printf("padding= %f\n",_actuator_outputs[1]._padding0[0]);
+			}
+			printf("padding= %f\n",_actuator_outputs[0]._padding0[0]);
 		
 			printf("outputs_update\n");
 		}
