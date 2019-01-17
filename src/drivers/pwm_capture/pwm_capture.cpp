@@ -126,6 +126,10 @@ private:
 	bool		_task_should_exit ;		/**< if true, task should exit */
 	int		_control_task ;			/**< task handle for task */
 
+	//rain 2018-1-9
+	//添加消息 publish 程序
+	//orb_advert_t	_pwm_capture_pub{nullptr};		/**< rate setpoint publication */
+	struct pwm_capture_s 		_pwm_capture {}; /**< vehicle status */
 
 
 	void _timer_init(void);
@@ -142,6 +146,7 @@ static void pwmcap_measure(bool should_exit);
 
 
 static PWMCAP *g_dev;
+orb_advert_t	_pwm_capture_pub{nullptr};		/**< rate setpoint publication */
 
 
 PWMCAP::PWMCAP() :
@@ -151,6 +156,7 @@ PWMCAP::PWMCAP() :
 	_timer_started(false),
 	_task_should_exit(false),
 	_control_task(-1)
+	//_pwm_capture_pub{nullptr}
 {
 }
 
@@ -430,8 +436,6 @@ int PWMCAP::task_main_trampoline(int argc, char *argv[])
 void PWMCAP::task_main()
 {
 	
-
-	
 	//int i = 0;
 	while (!_task_should_exit) {
 
@@ -483,35 +487,38 @@ static void pwmcap_test(void)
 
 static void pwmcap_measure(bool should_exit)
 {
-	static int fd = -1;
 
-		 fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
+	 int fd = open(PWMCAP0_DEVICE_PATH, O_RDONLY);
 
-		if (fd == -1) {
-			errx(1, "Failed to open device");
-		}
-
-
-
-	//uint64_t start_time = hrt_absolute_time();
+	if (fd == -1) {
+		errx(1, "Failed to open device");
+	}
 
 	struct pwm_capture_s buf;
 
-	//if (!should_exit) {
 
-		if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
-			printf("period=%u width=%u error_count=%u\n",
-			       (unsigned)buf.period,
-			       (unsigned)buf.pulse_width,
-			       (unsigned)buf.error_count);
+	if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
+		printf("period=%u width=%u error_count=%u\n",
+		       (unsigned)buf.period,
+		       (unsigned)buf.pulse_width,
+		       (unsigned)buf.error_count);
 
-		} else {
-			/* no data, retry in 2 ms */
-			//::usleep(2000);
-			printf("pwmcap_measure error\n");
+
+		buf.timestamp = hrt_absolute_time();
+
+				
+		if (_pwm_capture_pub != nullptr) {
+	
+			orb_publish( ORB_ID(pwm_capture), _pwm_capture_pub, &buf);
+	
+		} else  {
+			_pwm_capture_pub = orb_advertise( ORB_ID(pwm_capture), &buf);
 		}
-	//}
-		close(fd);
+			   
+
+	} 
+
+	close(fd);
 
 }
 

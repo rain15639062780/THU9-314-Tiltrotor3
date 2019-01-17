@@ -64,8 +64,8 @@
 //#include <uORB/topics/adc_report.h>
 
 //rain 2018-12-23
-//add adc_report topic
-//#include <uORB/topics/pwm_capture.h>
+//add pwm_report topic
+#include <uORB/topics/pwm_capture.h>
 
 //rain 2018-10-13
 //add euler_mag header
@@ -701,7 +701,7 @@ void Logger::add_default_topics()
 
 	//rain 2018-12-23
 	//添加pwm_capture消息的记录
-	//add_topic("pwm_capture");
+	add_topic("pwm_capture");
 
 
 #ifdef CONFIG_ARCH_BOARD_SITL
