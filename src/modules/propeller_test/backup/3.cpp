@@ -256,7 +256,7 @@ int PROPELLER::task_main_trampoline(int argc, char *argv[])
 void PROPELLER::task_main()
 {
 
-	_actuator_control_0_sub = orb_subscribe(ORB_ID(actuator_controls_0));
+	_actuator_control_0_sub = orb_subscribe(ORB_ID(actuator_controls));
 	_actuator_outputs_0_sub = orb_subscribe(ORB_ID(actuator_outputs));
 	_pwm_capture_sub = orb_subscribe(ORB_ID(pwm_capture));
 	_adc_capture_sub = orb_subscribe(ORB_ID(adc_report));

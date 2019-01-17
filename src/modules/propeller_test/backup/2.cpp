@@ -57,9 +57,6 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/pwm_capture.h>
-#include <uORB/topics/actuator_controls.h>
-#include <uORB/topics/actuator_outputs.h>
-#include <uORB/topics/adc_report.h>
 
 
 
@@ -86,31 +83,10 @@ public:
 	void task_main();
 
 
-
-
-
 private:
 
 	bool		_task_should_exit = false;		/**< if true, task should exit */
 	int		_control_task = -1;			/**< task handle for task */
-
-	bool actuator_controls_poll();
-	bool actuator_outputs_poll();
-	bool pwm_capture_poll();
-	bool adc_capture_poll();
-
-	int 	_actuator_control_0_sub = -1;
-	int 	_actuator_outputs_0_sub = -1;
-	int 	_pwm_capture_sub = -1;
-	int 	_adc_capture_sub = -1;
-
-	struct actuator_controls_s		_actuator_controls {};		/**< actuator controls */
-	struct actuator_outputs_s			_actuator_outputs {};	/**< vehicle status */
-	struct pwm_capture_s			_pwm_capture {};	/**< battery status */
-	struct adc_report_s			_adc_capture {};	//< gyro data before thermal correctons and
-
-
-	
 
 };
 
@@ -144,66 +120,6 @@ PROPELLER::~PROPELLER()
 
 	propeller::instance = nullptr;
 
-}
-
-
-bool
-PROPELLER::actuator_controls_poll()
-{
-	/* check if there is a new message */
-	bool updated;
-	orb_check(_actuator_control_0_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(actuator_controls), _actuator_control_0_sub, &_actuator_controls);
-	}
-
-	return updated;
-}
-
-bool
-PROPELLER::actuator_outputs_poll()
-{
-	/* check if there is a new message */
-	bool updated;
-	orb_check(_actuator_outputs_0_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(actuator_outputs), _actuator_outputs_0_sub, &_actuator_outputs);
-	}
-
-	return updated;
-}
-
-
-
-bool
-PROPELLER::pwm_capture_poll()
-{
-	/* check if there is a new message */
-	bool updated;
-	orb_check(_pwm_capture_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(pwm_capture), _pwm_capture_sub, &_pwm_capture);
-	}
-
-	return updated;
-}
-
-
-bool
-PROPELLER::adc_capture_poll()
-{
-	/* check if there is a new message */
-	bool updated;
-	orb_check(_adc_capture_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(adc_report), _adc_capture_sub, &_adc_capture);
-	}
-
-	return updated;
 }
 
 
@@ -255,39 +171,13 @@ int PROPELLER::task_main_trampoline(int argc, char *argv[])
 
 void PROPELLER::task_main()
 {
-
-	_actuator_control_0_sub = orb_subscribe(ORB_ID(actuator_controls_0));
-	_actuator_outputs_0_sub = orb_subscribe(ORB_ID(actuator_outputs));
-	_pwm_capture_sub = orb_subscribe(ORB_ID(pwm_capture));
-	_adc_capture_sub = orb_subscribe(ORB_ID(adc_report));
-
-
 	int i = 0;
 	while (!_task_should_exit) {
 
-		bool control_update =  actuator_controls_poll();
-		bool outputs_update = actuator_outputs_poll();
-		bool pwm_update = pwm_capture_poll();
-		bool adc_update = adc_capture_poll();
-
-		if(control_update){printf("control_update\n");}
-		if(outputs_update){printf("outputs_update\n");}
-		if(pwm_update){printf("pwm_update\n");}
-		if(adc_update){printf("adc_update\n");}
-	
-
-		printf("PROPELLER::task_main = %d\n\n\n",i++);
-		usleep(10000);
+		printf("PROPELLER::task_main = %d\n",i++);
+		usleep(200000);
 
 	}
-
-
-	orb_unsubscribe(_actuator_control_0_sub);
-	orb_unsubscribe(_actuator_outputs_0_sub);
-	orb_unsubscribe(_pwm_capture_sub);
-	orb_unsubscribe(_adc_capture_sub);
-
-	
 }
 
 
