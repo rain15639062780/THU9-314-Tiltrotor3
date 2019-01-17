@@ -114,6 +114,11 @@ set(config_module_list
 	modules/vtol_att_control
 
 	#
+	# propeller_test
+	#
+	modules/propeller_test
+
+	#
 	# Logging
 	#
 	modules/logger
