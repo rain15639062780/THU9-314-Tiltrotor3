@@ -498,12 +498,11 @@ static void pwmcap_measure(bool should_exit)
 
 
 	if (::read(fd, &buf, sizeof(buf)) == sizeof(buf)) {
-	
-	/*	printf("period=%u width=%u error_count=%u\n",
+		printf("period=%u width=%u error_count=%u\n",
 		       (unsigned)buf.period,
 		       (unsigned)buf.pulse_width,
 		       (unsigned)buf.error_count);
-	*/
+
 
 		buf.timestamp = hrt_absolute_time();
 
