@@ -99,8 +99,6 @@ private:
 	bool pwm_capture_poll();
 	bool adc_capture_poll();
 
-	void propeller_data_deal();
-
 	int 	_actuator_control_0_sub = -1;
 
 	
@@ -118,32 +116,7 @@ private:
 	struct adc_report_s			_adc_capture {};	//< gyro data before thermal correctons and
 
 
-
-	struct propeller_data_s{
-		
-		float act_control[4];	//control: roll,pitch,yaw,thrust
-		float act_output[4];	//channel outputs:s0,s1,s2,s3
-		uint32_t pwm_period;	//unit: us
-		float voltage;//adc_report.channel_value[10];
-		float current;//adc_report.channel_value[4];
-	};
-
-	struct propeller_data_uart_s{
-		
-		uint16_t act_control[4];	//control: roll,pitch,yaw,thrust
-		uint16_t act_output[4];	//channel outputs:s0,s1,s2,s3
-		uint32_t pwm_period;	//unit: us
-		uint16_t voltage;//adc_report.channel_value[10];
-		uint16_t current;//adc_report.channel_value[4];
-	};
-
-
-	struct propeller_data_s propeller_data_raw;//保存原始数据
-	struct propeller_data_uart_s propeller_data_send;//将原始数据转换成无符号整型类型数据
-
-	uint8_t send_buf[sizeof(propeller_data_uart_s)];//定义发送buffer
 	
-
 
 };
 
@@ -251,76 +224,6 @@ PROPELLER::adc_capture_poll()
 
 
 
-void
-PROPELLER::propeller_data_deal(){
-
-	//获取原始数据
-	propeller_data_raw.act_control[0] = _actuator_controls.control[0];
-	propeller_data_raw.act_control[1] = _actuator_controls.control[1];
-	propeller_data_raw.act_control[2] = _actuator_controls.control[2];
-	propeller_data_raw.act_control[3] = _actuator_controls.control[3];
-	
-	
-	propeller_data_raw.act_output[0] = _actuator_outputs[0].output[0];
-	propeller_data_raw.act_output[1] = _actuator_outputs[0].output[1];
-	propeller_data_raw.act_output[2] = _actuator_outputs[0].output[2];
-	propeller_data_raw.act_output[3] = _actuator_outputs[0].output[3];
-	
-	propeller_data_raw.pwm_period = _pwm_capture.period;
-	propeller_data_raw.voltage = _adc_capture.channel_value[10];
-	propeller_data_raw.current = _adc_capture.channel_value[4];
-	
-	//数据类型转换
-	propeller_data_send.act_control[0] = (uint16_t)(((double)propeller_data_raw.act_control[0]+0.0005)*1000);
-	propeller_data_send.act_control[1] = (uint16_t)(((double)propeller_data_raw.act_control[1]+0.0005)*1000);
-	propeller_data_send.act_control[2] = (uint16_t)(((double)propeller_data_raw.act_control[2]+0.0005)*1000);
-	propeller_data_send.act_control[3] = (uint16_t)(((double)propeller_data_raw.act_control[3]+0.0005)*1000);
-	
-	propeller_data_send.act_output[0] =  (uint16_t)(_actuator_outputs[0].output[0]+(float)0.5);
-	propeller_data_send.act_output[1] =  (uint16_t)(_actuator_outputs[0].output[1]+(float)0.5);
-	propeller_data_send.act_output[2] =  (uint16_t)(_actuator_outputs[0].output[2]+(float)0.5);
-	propeller_data_send.act_output[3] =  (uint16_t)(_actuator_outputs[0].output[3]+(float)0.5);
-	
-	propeller_data_send.pwm_period = _pwm_capture.period+1;
-	propeller_data_send.voltage = (uint16_t)((double)_adc_capture.channel_value[10]/3.3*4096.0+0.5);//转换为adc采样输出值
-	propeller_data_send.current = (uint16_t)((double)_adc_capture.channel_value[4]/6.6*4096.0*2.0+0.5);//转换为adc采样输出值
-
-	uint8_t i = 0;
-	
-	//propeller_data_send.act_control
-	for(i = 0; i < 8; i += 2){
-		send_buf[i] = (uint8_t)((propeller_data_send.act_control[i/2] & 0xff00) >> 8);//高字节
-		send_buf[i+1] = (uint8_t)(propeller_data_send.act_control[i/2] & 0x00ff);//低字节
-	}
-	
-	//propeller_data_send.act_output
-	for(i = 0; i < 8; i += 2){
-		send_buf[i+8] = (uint8_t)((propeller_data_send.act_output[i/2] & 0xff00) >> 8);//高字节
-		send_buf[i+1+8] = (uint8_t)(propeller_data_send.act_output[i/2] & 0x00ff);//低字节
-	}
-	
-	//propeller_data_send.pwm_period
-	send_buf[16] = (uint8_t)((propeller_data_send.pwm_period & 0xff000000) >> 24);
-	send_buf[17] = (uint8_t)((propeller_data_send.pwm_period & 0x00ff0000) >> 16);
-	send_buf[18] = (uint8_t)((propeller_data_send.pwm_period & 0x0000ff00) >> 8);
-	send_buf[19] = (uint8_t)(propeller_data_send.pwm_period & 0x000000ff);
-	
-	//propeller_data_send.voltage
-	send_buf[20] = (uint8_t)((propeller_data_send.voltage & 0xff00) >> 8);//高字节
-	send_buf[21] = (uint8_t)(propeller_data_send.voltage & 0x00ff);//低字节
-	
-	//propeller_data_send.current
-	send_buf[22] = (uint8_t)((propeller_data_send.current & 0xff00) >> 8);//高字节
-	send_buf[23] = (uint8_t)(propeller_data_send.current & 0x00ff);//低字节
-
-	
-}
-
-
-
-
-
-
 int
 PROPELLER::start(){
 	
@@ -394,21 +297,14 @@ void PROPELLER::task_main()
 //		struct pwm_capture_s			_pwm_capture {};	/**< battery status */
 //		struct adc_report_s 		_adc_capture {};	//< gyro data before thermal correctons and
 
-//		struct propeller_data_s propeller_data_raw;//保存原始数据
-//		struct propeller_data_uart_s propeller_data_send;//将原始数据转换成无符号整型类型数据
-//		send_buf
-
-
-		propeller_data_deal();
-
-
-
 
 
 		if(control_update){
 	//		for( i = 0; i<8; i++){
-	//		printf("control[%d]= %f\n",i,(double)_actuator_controls.control[i]*1000);	
+	//		printf("control[%d]= %f\n",i,(double)_actuator_controls.control[i]*1000);
+			
 	//		}
+
 			printf("control_update\n");
 		}
 		
@@ -430,8 +326,11 @@ void PROPELLER::task_main()
 		if(adc_update){
 		//	printf("adc_value[6] = %u\n",(double)_adc_capture.channel_value[6]);
 				for( i = 0; i<12; i++){
-				printf("adc_value[%d]= %f\n",i,(double)_adc_capture.channel_value[i]*1000000000);		
+				printf("adc_value[%d]= %f\n",i,(double)_adc_capture.channel_value[i]*1000000000);
+				
 				}
+
+		
 			printf("adc_update\n");
 		}
 	
