@@ -150,7 +150,8 @@ private:
 	struct propeller_data_s propeller_data_raw;//保存原始数据
 	struct propeller_data_uart_s propeller_data_send;//将原始数据转换成无符号整型类型数据
 
-	uint8_t send_buf[sizeof(propeller_data_uart_s)];//定义发送buffer
+	uint8_t head_buf[2];//定义发送帧帧头字符
+	uint8_t send_buf[sizeof(propeller_data_uart_s) + 1];//定义发送buffer,追加一个校验和
 	
 	int				_serial_fd{-1};					
 
@@ -167,6 +168,9 @@ PROPELLER::PROPELLER()
 		_actuator_outputs_sub[i] = -1;
 	}
 
+	//定义发送帧帧头字符
+	head_buf[0] = 0x55;
+	head_buf[1] = 0xAA;
 
 	
 }
@@ -306,14 +310,14 @@ PROPELLER::propeller_data_deal(){
 	propeller_data_send.voltage = (uint16_t)((double)_adc_capture.channel_value[10]/3.3*4096.0+0.5);//转换为adc采样输出值
 	propeller_data_send.current = (uint16_t)((double)_adc_capture.channel_value[4]/6.6*4096.0*2.0+0.5);//转换为adc采样输出值
 
-/*	printf("propeller_data_send\n");
+	printf("propeller_data_send\n");
 	printf("control[3] = %u act_output[0] = %u period = %u volt = %u current = %u\n\n\n",                              
 		propeller_data_send.act_control[3],
 		propeller_data_send.act_output[0],
 		propeller_data_send.pwm_period,
 		propeller_data_send.voltage,
 		propeller_data_send.current);
-*/
+
 
 
 	uint8_t i = 0;
@@ -344,13 +348,19 @@ PROPELLER::propeller_data_deal(){
 	send_buf[22] = (uint8_t)((propeller_data_send.current & 0xff00) >> 8);//高字节
 	send_buf[23] = (uint8_t)(propeller_data_send.current & 0x00ff);//低字节
 
+	uint8_t check_sum = 0;
 
-/*	
+	
 	for(i=0; i<sizeof(propeller_data_uart_s); i++){
+
+		check_sum += send_buf[i];
+
 		printf("send_buf[%d]=%d\n",i,send_buf[i]);
 
 	}
-*/
+	
+	send_buf[24] = (check_sum &0xff);
+
 	printf("\n\n");
 	
 }
@@ -456,7 +466,7 @@ PROPELLER::start(){
 	/* start the task */
 	_control_task = px4_task_spawn_cmd("propeller",
 					   SCHED_DEFAULT,
-					   SCHED_PRIORITY_ESTIMATOR+2,
+					   SCHED_PRIORITY_ESTIMATOR-6,
 					   2000,
 					   (px4_main_t)&PROPELLER::task_main_trampoline,
 					   nullptr);
@@ -525,14 +535,15 @@ PROPELLER::task_main()
 
 
 
-	char rain_buf[25] ;
+	//char rain_buf[25] ;
 
 
 
 
 	unsigned int i = 0;
 
-	memset(&rain_buf, 0, sizeof(rain_buf));
+	//memset(&rain_buf, 0, sizeof(rain_buf));
+	memset(send_buf, 0, sizeof(send_buf));
 
 
 	
@@ -552,7 +563,7 @@ PROPELLER::task_main()
 		
 		if(control_update){ printf("control_update\n");}
 		
-		if(outputs_update){	printf("outputs_update\n");}
+		if(outputs_update){printf("outputs_update\n");}
 		
 		if(pwm_update){ printf("pwm_update\n");}
 		
@@ -560,6 +571,7 @@ PROPELLER::task_main()
 	
 		propeller_data_deal();
 
+		printf("PROPELLER::task_main = %d\n\n\n",i++);
 
 	
 		//uint8_t n = sizeof(send_buf);
@@ -567,18 +579,13 @@ PROPELLER::task_main()
 
 		
 
-		uint8_t n = sprintf(rain_buf, "SAMPLE #%d\n", i);
-		write(_serial_fd, &rain_buf[0], n);
-		usleep(100);
-
-
+		//uint8_t n = sprintf(rain_buf, "SAMPLE #%d\n", i);
 		
-		
+		write(_serial_fd, &head_buf[0], 2);//bytes = 2
+		write(_serial_fd, &send_buf[0], sizeof(send_buf));//bytes = 25
+		//usleep(100);
 
-
-		
-
-		printf("PROPELLER::task_main = %d\n\n\n",i++);
+	
 		usleep(1000);
 
 	}

@@ -413,7 +413,7 @@ int PWMCAP::task_main_create()
 	/* start the task */
 	_control_task = px4_task_spawn_cmd("pwmcap",
 					   SCHED_DEFAULT,
-					   SCHED_PRIORITY_ESTIMATOR-1,
+					   SCHED_PRIORITY_ESTIMATOR-5,
 					   2000,
 					   (px4_main_t)&PWMCAP::task_main_trampoline,
 					   nullptr);
