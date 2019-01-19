@@ -417,6 +417,7 @@ PROPELLER::uart_setBaudrate(unsigned baud){
 	/* no parity, one stop bit, disable flow control */
 	uart_config.c_cflag &= ~(CSTOPB | PARENB | CRTSCTS);
 
+
 	/* set baud rate */
 	if ((termios_state = cfsetispeed(&uart_config, speed)) < 0) {
 		PX4_ERR("ERR: %d (cfsetispeed)", termios_state);
@@ -513,7 +514,7 @@ PROPELLER::task_main()
 	 _serial_fd = open("/dev/ttyS3", O_RDWR | O_NONBLOCK | O_NOCTTY); //
 	
 	if (_serial_fd < 0) {
-		printf("ERROR opening UART4, aborting..\n");
+		printf("ERROR opening UART2, aborting..\n");
 		return _serial_fd;
 	
 	} else {
@@ -524,12 +525,17 @@ PROPELLER::task_main()
 
 
 
-	//char rain_buf[25] ;
+	char rain_buf[25] ;
 
 
 
 
 	unsigned int i = 0;
+
+	memset(&rain_buf, 0, sizeof(rain_buf));
+
+
+	
 	while (!_task_should_exit) {
 
 		bool control_update =  actuator_controls_poll();
@@ -561,8 +567,9 @@ PROPELLER::task_main()
 
 		
 
-		//uint8_t n = sprintf(rain_buf, "SAMPLE #%d\n", i);
-		//write(_serial_fd, &rain_buf, n);
+		uint8_t n = sprintf(rain_buf, "SAMPLE #%d\n", i);
+		write(_serial_fd, &rain_buf[0], n);
+		usleep(100);
 
 
 		
