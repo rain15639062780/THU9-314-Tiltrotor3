@@ -284,7 +284,7 @@ PROPELLER::propeller_data_deal(){
 	propeller_data_raw.voltage = _adc_capture.channel_value[10];
 	propeller_data_raw.current = _adc_capture.channel_value[4];
 
-	printf("propeller_data_raw\n");
+	/*printf("propeller_data_raw\n");
 	printf("control[3] = %f act_output[0] = %f period = %d volt = %f current = %f \n\n\n",                              
 		(double)propeller_data_raw.act_control[3],
 		(double)propeller_data_raw.act_output[0],
@@ -292,7 +292,7 @@ PROPELLER::propeller_data_deal(){
 		(double)propeller_data_raw.voltage,
 		(double)propeller_data_raw.current);
 
-
+	*/
 
 	
 	//数据类型转换
@@ -310,6 +310,7 @@ PROPELLER::propeller_data_deal(){
 	propeller_data_send.voltage = (uint16_t)((double)_adc_capture.channel_value[10]/3.3*4096.0+0.5);//转换为adc采样输出值
 	propeller_data_send.current = (uint16_t)((double)_adc_capture.channel_value[4]/6.6*4096.0*2.0+0.5);//转换为adc采样输出值
 
+/*
 	printf("propeller_data_send\n");
 	printf("control[3] = %u act_output[0] = %u period = %u volt = %u current = %u\n\n\n",                              
 		propeller_data_send.act_control[3],
@@ -317,7 +318,7 @@ PROPELLER::propeller_data_deal(){
 		propeller_data_send.pwm_period,
 		propeller_data_send.voltage,
 		propeller_data_send.current);
-
+*/
 
 
 	uint8_t i = 0;
@@ -355,13 +356,13 @@ PROPELLER::propeller_data_deal(){
 
 		check_sum += send_buf[i];
 
-		printf("send_buf[%d]=%d\n",i,send_buf[i]);
+	//	printf("send_buf[%d]=%d\n",i,send_buf[i]);
 
 	}
 	
 	send_buf[24] = (check_sum &0xff);
 
-	printf("\n\n");
+	//printf("\n\n");
 	
 }
 
@@ -540,7 +541,7 @@ PROPELLER::task_main()
 
 
 
-	unsigned int i = 0;
+//	unsigned int i = 0;
 
 	//memset(&rain_buf, 0, sizeof(rain_buf));
 	memset(send_buf, 0, sizeof(send_buf));
@@ -549,11 +550,18 @@ PROPELLER::task_main()
 	
 	while (!_task_should_exit) {
 
+/*
 		bool control_update =  actuator_controls_poll();
 		bool outputs_update = actuator_outputs_poll();
 		bool pwm_update = pwm_capture_poll();
 		bool adc_update = adc_capture_poll();
+*/
 
+		actuator_controls_poll();
+		actuator_outputs_poll();
+		pwm_capture_poll();
+		adc_capture_poll();
+/*
 
 		if(control_update&&outputs_update&&pwm_update&&adc_update){
 
@@ -568,10 +576,11 @@ PROPELLER::task_main()
 		if(pwm_update){ printf("pwm_update\n");}
 		
 		if(adc_update){ printf("adc_update\n");}
+*/
 	
 		propeller_data_deal();
 
-		printf("PROPELLER::task_main = %d\n\n\n",i++);
+//		printf("PROPELLER::task_main = %d\n\n\n",i++);
 
 	
 		//uint8_t n = sizeof(send_buf);
@@ -586,7 +595,7 @@ PROPELLER::task_main()
 		//usleep(100);
 
 	
-		usleep(1000);
+		usleep(4000);
 
 	}
 

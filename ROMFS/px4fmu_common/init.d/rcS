@@ -535,6 +535,17 @@ else
 		echo "Addons script: ${FEXTRAS}"
 		sh $FEXTRAS
 	fi
+
+	#
+	# rain 2019-1-29
+	#
+	if ver hwcmp PX4FMU_V5 
+	then
+		propeller_test start
+		pwm_capture start
+	fi
+
+
 #
 # End of autostart.
 #
