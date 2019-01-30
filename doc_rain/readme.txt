@@ -34,3 +34,42 @@
 实验结果：保存的日志数据中并未包含pwm_capture消息。
 推测：pwm_capture_main函数中只是简单启动cap口功能，然后通过printf函数打印在nsh终端,并未对数据进行publish.
 
+rain 2019-1-30
+4.1	源程序修改说明（Github:THU9-314-Tiltrotor3/THU9-314-tiltrotor-imu-cap-v1.0）
+源文件位置	修改简述
+Src/drivers/pwm_capture/	                Pwm捕捉功能硬件驱动程序
+Src/drivers/propeller_test/	                订阅adc,pwm输出,control,pwm脉宽等消息，初始化串口（baud =57600）,数据处理，发送数据帧（仅发送功能）
+ROMFS/px4fmu_common/mixers/quad_+.main.mix	将ch5的控制源更改为油门，调整偏移量和上下限
+ROMFS/px4fmu_common/Init.d/5001_quad_+	    设置第5 pwm输出通道频率为400Hz
+Cmake/configs/nuttx_px4fmu-v5_default.cmake	将添加的程序加入自动编译脚本
+ROMFS/px4fmu_common/Init.d/rcS	            将功能函数启动命令加入自启动脚本
+
+4.2	数据通信协议：
+
+字节序号	  定义	         比例尺	    范围
+1	        帧头55H		
+2	        帧头 AAH		
+0~1	        控制量-roll	    1000	-1.0~1.0
+2~3	        控制量-pitch	1000	-1.0~1.0
+4~5	        控制量-yaw	    1000	-1.0~1.0
+6~7	        控制量-thrust	1000	0.0~1.0
+			
+8~9	        S1通道输出pwm	1	    0~2000
+10~11	    S2通道输出pwm	1	    0~2000
+12~13	    S3通道输出pwm	1	    0~2000
+14~15	    S4通道输出pwm	1	    0~2000
+			
+16~19	    捕获脉宽周期值	 u64	
+			
+20~21	    电压ad采集值	1	    0~4096
+			
+22~23	    电流ad采集值	1	    0~4096
+24	        校验和	u8	
+
+4.3	硬件连接
+    飞控电源板---传感器
+    ADC3v3---电压信号
+	ADC6v6---电流信号
+	Cap1---转速反馈信号
+	M5&GND---电调控制信号
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
