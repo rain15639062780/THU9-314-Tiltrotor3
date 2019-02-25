@@ -765,50 +765,6 @@ MulticopterAttitudeControl::run()
 				_actuators.timestamp = hrt_absolute_time();
 				_actuators.timestamp_sample = _sensor_gyro.timestamp;
 
-				//////////////////////////////////////////////////////////////////////////////////
-				/*rain 2019-2-25
-				*在此处添加螺旋桨测试实验中油门的控制
-				*在QGC端映射遥控器三段开关至aux1
-				*程序中判断aux1状态，切入不同处理程序
-				*处理程序中修改control[3]的值
-				*注意：在飞行器实飞过程中必须关闭此部分
-				*/
-
- 				//定义全局变量 deta_t 间隔周期
-                //           run_t  系统运行时间
-				
-				const uint64_t data_t = 5 * 1000; //5 second
-				static uint64_t run_t = hrt_absolute_time();
-
-			
-				if((hrt_absolute_time() - run_t) > data_t)
-					{
-						run_t =  hrt_absolute_time();
-						
-
-						if(_manual_control_sp.return_switch==1) 
-						{
-							_actuators.control[3] += (float)0.1;
-						}
-						else if(_manual_control_sp.return_switch==3) 
-						{
-							_actuators.control[3] -= (float)0.1;
-						}
-							
-
-						if(_actuators.control[3] > (float)1.0)
-						{
-							_actuators.control[3] = (float)1.0;
-						}
-						else if(_actuators.control[3] < (float)0.00001)
-						{
-							_actuators.control[3] = (float)0.0;
-						}
-					}	
-
-
-				//////////////////////////////////////////////////////////////////////////////////
-
 				/* scale effort by battery status */
 				if (_bat_scale_en.get() && _battery_status.scale > 0.0f) {
 					for (int i = 0; i < 4; i++) {
