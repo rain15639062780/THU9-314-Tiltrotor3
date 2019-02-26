@@ -250,5 +250,9 @@ private:
 	matrix::Vector3f _auto_rate_max;	/**< attitude rate limits in auto modes */
 	matrix::Vector3f _acro_rate_max;	/**< max attitude rates in acro mode */
 
+	uint64_t data_t ; //5 second
+	uint64_t last_t ;
+	float propeller_thrust ;//电机油门控制
+
 };
 

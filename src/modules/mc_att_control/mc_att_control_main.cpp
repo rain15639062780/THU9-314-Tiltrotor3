@@ -130,6 +130,11 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	}
 
 	parameters_updated();
+
+	 data_t = 5 * 1000000; //5 second
+	 last_t = hrt_absolute_time();
+	 propeller_thrust = 0.0;//电机油门控制
+
 }
 
 void
@@ -775,38 +780,42 @@ MulticopterAttitudeControl::run()
 				*/
 
  				//定义全局变量 deta_t 间隔周期
-                //           run_t  系统运行时间
+                //           last_t  系统运行时间
 				
-				const uint64_t data_t = 5 * 1000; //5 second
-				static uint64_t run_t = hrt_absolute_time();
+				//放入构造函数
+				//const uint64_t data_t = 2 * 1000; //5 second
+				//static uint64_t last_t = hrt_absolute_time();
+				//static float propeller_thrust = 0.0;//电机油门控制
 
 			
-				if((hrt_absolute_time() - run_t) > data_t)
+				if((hrt_absolute_time() - last_t) > data_t)
 					{
-						run_t =  hrt_absolute_time();
+						last_t =  hrt_absolute_time();
 						
 
-						if(_manual_control_sp.return_switch==1) 
+						if(_manual_control_sp.aux1 > (float)0.5) 
 						{
-							_actuators.control[3] += (float)0.1;
+							propeller_thrust += (float)0.1;
 						}
-						else if(_manual_control_sp.return_switch==3) 
+						else if(_manual_control_sp.aux1 < (float)-0.5) 
 						{
-							_actuators.control[3] -= (float)0.1;
+							propeller_thrust -= (float)0.1;
 						}
 							
 
-						if(_actuators.control[3] > (float)1.0)
+						if(propeller_thrust > (float)1.0)
 						{
-							_actuators.control[3] = (float)1.0;
+							propeller_thrust = (float)1.0;
 						}
-						else if(_actuators.control[3] < (float)0.00001)
+						else if(propeller_thrust < (float)0.00001)
 						{
-							_actuators.control[3] = (float)0.0;
+							propeller_thrust = (float)0.0;
 						}
+						
 					}	
-
-
+					_actuators.control[3] = (PX4_ISFINITE(propeller_thrust)) ? propeller_thrust : 0.0f;
+					//printf("aux:%f\t", (double)_manual_control_sp.aux1);
+					//printf("ctr:%f\n", (double)_actuators.control[3]);
 				//////////////////////////////////////////////////////////////////////////////////
 
 				/* scale effort by battery status */
