@@ -304,7 +304,7 @@ PROPELLER::propeller_data_deal(){
 	propeller_data_send.act_output[0] =  (uint16_t)(_actuator_outputs[0].output[0]+(float)0.5);
 	propeller_data_send.act_output[1] =  (uint16_t)(_actuator_outputs[0].output[1]+(float)0.5);
 	propeller_data_send.act_output[2] =  (uint16_t)(_actuator_outputs[0].output[2]+(float)0.5);
-	propeller_data_send.act_output[3] =  (uint16_t)(_actuator_outputs[0].output[3]+(float)0.5);
+	propeller_data_send.act_output[3] =  (uint16_t)(_actuator_outputs[0].output[4]+(float)0.5);//M5
 	
 	propeller_data_send.pwm_period = _pwm_capture.period+1;
 	propeller_data_send.voltage = (uint16_t)((double)_adc_capture.channel_value[10]/3.3*4096.0+0.5);//转换为adc采样输出值

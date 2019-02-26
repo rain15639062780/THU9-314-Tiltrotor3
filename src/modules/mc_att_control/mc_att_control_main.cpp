@@ -789,31 +789,36 @@ MulticopterAttitudeControl::run()
 
 			
 				if((hrt_absolute_time() - last_t) > data_t)
+				{
+					last_t =  hrt_absolute_time();
+					
+
+					if(_manual_control_sp.aux1 > (float)0.5) 
 					{
-						last_t =  hrt_absolute_time();
+						propeller_thrust += (float)0.1;
+					}
+					else if(_manual_control_sp.aux1 < (float)-0.5) 
+					{
+						propeller_thrust -= (float)0.1;
+					}
 						
 
-						if(_manual_control_sp.aux1 > (float)0.5) 
-						{
-							propeller_thrust += (float)0.1;
-						}
-						else if(_manual_control_sp.aux1 < (float)-0.5) 
-						{
-							propeller_thrust -= (float)0.1;
-						}
-							
-
-						if(propeller_thrust > (float)1.0)
-						{
-							propeller_thrust = (float)1.0;
-						}
-						else if(propeller_thrust < (float)0.00001)
-						{
-							propeller_thrust = (float)0.0;
-						}
-						
-					}	
+					if(propeller_thrust > (float)1.0)
+					{
+						propeller_thrust = (float)1.0;
+					}
+					else if(propeller_thrust < (float)0.00001)
+					{
+						propeller_thrust = (float)0.0;
+					}
+					
+				}	
+				if((_manual_control_sp.aux1 > (float)0.5) || (_manual_control_sp.aux1 < (float)-0.5) )
+				{
 					_actuators.control[3] = (PX4_ISFINITE(propeller_thrust)) ? propeller_thrust : 0.0f;
+				}
+
+					
 					//printf("aux:%f\t", (double)_manual_control_sp.aux1);
 					//printf("ctr:%f\n", (double)_actuators.control[3]);
 				//////////////////////////////////////////////////////////////////////////////////
