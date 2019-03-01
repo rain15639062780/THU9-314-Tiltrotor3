@@ -320,6 +320,10 @@ void  sever_nozzle::sever_nozzle_calc()
 	//printf("\tKy_nozzle = %.6f\t Kn_nozzle = %.6f\n",Ky_nozzle*57.3,Kn_nozzle*57.3);
 
 //%%%%%%%%%%%%%%%%%%%%%%
+	//金属3D 打印喷管减速比
+	//    舵机轴盘      喷管绕线直径     减速比
+	//C1：  100mm         191mm       1.91
+	//C2：  73mm          201mm       2.7534
 	if(Kn_nozzle>99.99999/57.3)
 	{
 		Kn_nozzle=99.99999/57.3;
@@ -443,10 +447,6 @@ float sever_nozzle::sever_nozzle_sine()
 	return rc2_input;
 
 }
-
-
-
-
 
 
 
